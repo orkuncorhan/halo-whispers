@@ -3,13 +3,12 @@
 
 import React, { useState, use } from "react";
 import { motion } from "framer-motion";
-// DÜZELTME 1: İki kat yukarı çıkıyoruz (../../)
-import { useTheme } from "../../context/ThemeContext";
+// KESİN ÇÖZÜM: @ alias
+import { useTheme } from "@/app/context/ThemeContext";
 import Link from "next/link";
 import { ArrowLeft, Star, Share2, UserPlus, Check, Home, Bell, User, MessageCircle } from "lucide-react";
 
 export default function UserProfilePage({ params }: { params: Promise<{ username: string }> }) {
-  // useTheme'i güvenli şekilde çekiyoruz
   const themeContext = useTheme();
   const theme = themeContext ? themeContext.getThemeColors() : { bg: "bg-gray-50", halo: "bg-gray-200", accent: "text-gray-800" };
   
@@ -39,7 +38,6 @@ export default function UserProfilePage({ params }: { params: Promise<{ username
 
       <div className="relative z-10 max-w-2xl mx-auto pt-10 px-6">
         
-        {/* HEADER */}
         <div className="flex items-center gap-4 mb-8">
           <Link href="/feed" className="p-3 rounded-full bg-white/50 hover:bg-white transition-all shadow-sm text-gray-600">
             <ArrowLeft size={24} />
@@ -47,7 +45,6 @@ export default function UserProfilePage({ params }: { params: Promise<{ username
           <span className="text-sm font-bold tracking-widest uppercase text-gray-400">Profile View</span>
         </div>
 
-        {/* KULLANICI KARTI */}
         <motion.div 
           initial={{ opacity: 0, scale: 0.95 }}
           animate={{ opacity: 1, scale: 1 }}
@@ -98,11 +95,9 @@ export default function UserProfilePage({ params }: { params: Promise<{ username
           </div>
         </motion.div>
 
-        {/* KULLANICININ FISILTILARI */}
         <h3 className="text-xs font-bold text-gray-400 tracking-widest uppercase mb-6 pl-2">Recent Whispers</h3>
         
         <div className="space-y-4">
-          {/* DÜZELTME 2: (whisper: any) diyerek TypeScript'i susturduk */}
           {userWhispers.map((whisper: any) => (
             <motion.div 
               key={whisper.id}
@@ -129,7 +124,6 @@ export default function UserProfilePage({ params }: { params: Promise<{ username
         </div>
       </div>
 
-      {/* MOBİL ALT MENÜ */}
       <div className="md:hidden fixed bottom-0 left-0 w-full bg-white/90 backdrop-blur-xl border-t border-gray-200 p-2 flex justify-around items-center z-50 pb-6">
         <Link href="/feed" className="p-3 rounded-full hover:bg-gray-100 transition-colors"><Home size={26} className="text-gray-400" /></Link>
         <Link href="/notifications" className="p-3 rounded-full hover:bg-gray-100 transition-colors relative"><Bell size={26} className="text-gray-400" /></Link>
