@@ -3,27 +3,34 @@
 
 import React, { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { useRouter } from "next/navigation"; // Yönlendirme motoru
-// Relative path
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+// Import yolu düzeltildi
 import { useTheme } from "../context/ThemeContext";
 
 export default function HaloWhispersMood() {
-  // 'username' bilgisini de çekiyoruz ki kontrol edelim
-  const { mood, setMood, username } = useTheme(); 
+  const { mood, setMood, username, isMoodSetToday, confirmMoodForToday } = useTheme(); 
   const [mounted, setMounted] = useState(false);
   const router = useRouter();
 
   useEffect(() => {
     setMounted(true);
-  }, []);
+    // KRİTİK KONTROL:
+    // Eğer kullanıcı adı varsa VE bugün zaten mood seçilmişse
+    // Bu sayfada vakit kaybetme, direkt akışa git.
+    if (username && isMoodSetToday) {
+       router.push("/feed");
+    }
+  }, [username, isMoodSetToday, router]);
 
-  // --- AKILLI GEÇİŞ FONKSİYONU ---
   const handleEnter = () => {
-    // Eğer hafızada zaten bir isim varsa, Login'i atla, direkt Feed'e git
-    if (username && username !== "Halo Walker") {
+    // 1. Butona basınca bugünün mood'unu kaydet
+    confirmMoodForToday();
+
+    // 2. Yönlendir
+    if (username) {
       router.push("/feed");
     } else {
-      // İsim yoksa (ilk geliş), isim sormaya (Login) git
       router.push("/login");
     }
   };
@@ -63,16 +70,13 @@ export default function HaloWhispersMood() {
   return (
     <div className={`relative w-full min-h-screen overflow-hidden font-sans flex items-center justify-center transition-colors duration-1000 ${theme.bg} p-4`}>
       
-      {/* Arkaplan Dokusu */}
       <div className="absolute inset-0 opacity-[0.04] pointer-events-none" style={{ backgroundImage: 'url("https://www.transparenttextures.com/patterns/noise-lines.png")' }}></div>
 
-      {/* --- ANA CAM KART --- */}
       <div className="relative z-10 w-full max-w-5xl h-auto md:h-[600px] bg-white/40 backdrop-blur-xl border border-white/80 rounded-[32px] md:rounded-[48px] shadow-[0_20px_60px_-10px_rgba(0,0,0,0.1)] flex flex-col md:flex-row overflow-hidden ring-1 ring-white/50">
         
-        {/* --- SOL TARAFI: HALE --- */}
+        {/* SOL TARAFI: HALE */}
         <div className="w-full h-64 md:w-5/12 md:h-full flex items-center justify-center relative border-b md:border-b-0 md:border-r border-white/30 overflow-hidden bg-white/10 flex-shrink-0">
            
-           {/* Hale Animasyonları */}
            <motion.div 
              animate={{ scale: [1, 1.2, 1], opacity: [0.5, 0.8, 0.5] }}
              transition={{ duration: 5, repeat: Infinity, ease: "easeInOut" }}
@@ -94,7 +98,7 @@ export default function HaloWhispersMood() {
            <div className="absolute w-[80px] h-[80px] md:w-[120px] md:h-[120px] bg-white rounded-full blur-[15px] md:blur-[20px] mix-blend-overlay opacity-90"></div>
         </div>
 
-        {/* --- SAĞ TARAFI: İÇERİK --- */}
+        {/* SAĞ TARAFI: İÇERİK */}
         <div className="w-full md:w-7/12 h-full flex flex-col justify-center px-8 py-10 md:px-20 md:py-0 space-y-8 md:space-y-12">
           
           <div className="space-y-3 md:space-y-4 text-center md:text-left">
@@ -105,7 +109,6 @@ export default function HaloWhispersMood() {
             </p>
           </div>
 
-          {/* Slider */}
           <div className="space-y-6">
             <div className="flex justify-between text-[10px] md:text-[11px] font-bold tracking-widest uppercase text-gray-400">
               <span>Mood</span>
@@ -141,8 +144,7 @@ export default function HaloWhispersMood() {
             </div>
           </div>
 
-          {/* BUTON (DEĞİŞEN KISIM) */}
-          {/* Artık Link değil, Button. Tıklayınca kontrol edip yönlendiriyor. */}
+          {/* BUTON - AKILLI GEÇİŞ */}
           <button 
             onClick={handleEnter}
             className="w-full py-4 md:py-5 bg-[#2D3436] text-white rounded-2xl text-xs md:text-sm font-medium tracking-wider shadow-xl hover:bg-black hover:scale-[1.02] transition-all duration-300"

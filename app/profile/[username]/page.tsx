@@ -1,48 +1,46 @@
 // DOSYA: app/profile/[username]/page.tsx
 "use client";
 
-import React, { useState, use } from "react"; // 'use' eklendi
+import React, { useState, use } from "react";
 import { motion } from "framer-motion";
-import { useTheme } from "@/app/context/ThemeContext";
+// DÜZELTME BURADA: İki nokta (../../) ile iki üst klasöre çıkıyoruz
+import { useTheme } from "../../context/ThemeContext";
 import Link from "next/link";
-import { ArrowLeft, MessageCircle, Star, Share2, UserPlus, Check } from "lucide-react";
+import { ArrowLeft, MessageCircle, Star, Share2, UserPlus, Check, Home, Bell, User } from "lucide-react";
 
-// Props tipi güncellendi: params bir Promise
 export default function UserProfilePage({ params }: { params: Promise<{ username: string }> }) {
-  const { getThemeColors } = useTheme();
+  const { getThemeColors, whispers } = useTheme();
   const theme = getThemeColors();
   
-  // --- KRİTİK DÜZELTME BURADA ---
-  // params artık bir Promise olduğu için React.use() ile çözüyoruz
+  // Params verisini çözme
   const resolvedParams = use(params);
   const username = resolvedParams.username; 
 
-  // --- DUMMY DATA: KULLANICI BİLGİLERİ ---
+  // DUMMY DATA (Kullanıcı Profili)
   const userProfile = {
-    name: username.charAt(0).toUpperCase() + username.slice(1).replace("_", " "), // elara_sky -> Elara Sky
+    name: username.charAt(0).toUpperCase() + username.slice(1).replace("_", " "), 
     bio: "Gökyüzüne notlar bırakıyorum. 🌙✨",
-    haloColor: "bg-rose-100", // Bu kullanıcının halesi pembe
+    haloColor: "bg-rose-100", 
     haloGlow: "shadow-[0_0_60px_rgba(255,182,193,0.6)]",
     stats: { whispers: 42, hope: 890, following: 150 }
   };
 
-  // --- DUMMY DATA: KULLANICININ FISILTILARI ---
+  // O kullanıcının fısıltılarını bul (Şimdilik dummy veri ile karışık yapıyoruz)
+  // Gerçekte burada veritabanından o kişinin ID'sine göre çekmek gerekir.
   const userWhispers = [
     { id: 1, content: "Bazen sadece durup derin bir nefes almak, dünyayı yavaşlatmaya yeter.", time: "2h ago", hop: 45 },
     { id: 2, content: "Kendine nazik ol, sen de bir bahçesin ve bazen dinlenmeye ihtiyacın var.", time: "1d ago", hop: 120 },
     { id: 3, content: "Bugün birine kapıyı tuttum, teşekkür ettiğindeki gülümsemesi paha biçilemezdi.", time: "3d ago", hop: 85 },
   ];
 
-  // Takip Etme Mantığı
   const [isFollowing, setIsFollowing] = useState(false);
 
   return (
-    <div className={`min-h-screen font-sans text-[#2D3436] transition-colors duration-1000 ${theme.bg}`}>
+    <div className={`min-h-screen font-sans text-[#2D3436] transition-colors duration-1000 ${theme.bg} pb-24 md:pb-0`}>
       
-      {/* Arkaplan */}
       <div className={`fixed inset-0 z-0 pointer-events-none bg-gradient-to-tr opacity-40 transition-all duration-1000 ${theme.gradient}`} />
 
-      <div className="relative z-10 max-w-2xl mx-auto pt-10 pb-20 px-6">
+      <div className="relative z-10 max-w-2xl mx-auto pt-10 px-6">
         
         {/* HEADER */}
         <div className="flex items-center gap-4 mb-8">
@@ -52,18 +50,15 @@ export default function UserProfilePage({ params }: { params: Promise<{ username
           <span className="text-sm font-bold tracking-widest uppercase text-gray-400">Profile View</span>
         </div>
 
-        {/* --- KULLANICI KARTI --- */}
+        {/* KULLANICI KARTI */}
         <motion.div 
           initial={{ opacity: 0, scale: 0.95 }}
           animate={{ opacity: 1, scale: 1 }}
           className="bg-white/60 backdrop-blur-xl border border-white/80 rounded-[40px] shadow-xl overflow-hidden mb-10"
         >
-          {/* Kapak */}
           <div className={`h-32 w-full opacity-60 ${userProfile.haloColor}`} />
 
           <div className="px-8 pb-8">
-            
-            {/* Avatar ve Takip Butonu */}
             <div className="relative -mt-16 mb-4 flex justify-between items-end">
               <div className={`w-32 h-32 rounded-full border-4 border-white flex items-center justify-center ${userProfile.haloColor} ${userProfile.haloGlow}`}>
                  <div className="w-28 h-28 bg-white/40 rounded-full backdrop-blur-sm" />
@@ -81,7 +76,6 @@ export default function UserProfilePage({ params }: { params: Promise<{ username
               </button>
             </div>
 
-            {/* İsim ve Biyo */}
             <div className="space-y-2">
               <h1 className="text-3xl font-serif font-bold text-gray-800">{userProfile.name}</h1>
               <p className="text-sm font-bold text-gray-400">@{username}</p>
@@ -90,7 +84,6 @@ export default function UserProfilePage({ params }: { params: Promise<{ username
               </p>
             </div>
 
-            {/* İstatistikler */}
             <div className="flex gap-8 mt-6 border-t border-gray-200/50 pt-6 text-center sm:text-left">
               <div>
                 <span className="block text-xl font-bold text-gray-800">{userProfile.stats.whispers}</span>
@@ -105,11 +98,10 @@ export default function UserProfilePage({ params }: { params: Promise<{ username
                 <span className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">Following</span>
               </div>
             </div>
-
           </div>
         </motion.div>
 
-        {/* --- KULLANICININ FISILTILARI --- */}
+        {/* KULLANICININ FISILTILARI */}
         <h3 className="text-xs font-bold text-gray-400 tracking-widest uppercase mb-6 pl-2">Recent Whispers</h3>
         
         <div className="space-y-4">
@@ -137,8 +129,15 @@ export default function UserProfilePage({ params }: { params: Promise<{ username
             </motion.div>
           ))}
         </div>
-
       </div>
+
+      {/* MOBİL ALT MENÜ */}
+      <div className="md:hidden fixed bottom-0 left-0 w-full bg-white/90 backdrop-blur-xl border-t border-gray-200 p-2 flex justify-around items-center z-50 pb-6">
+        <Link href="/feed" className="p-3 rounded-full hover:bg-gray-100 transition-colors"><Home size={26} className="text-gray-400" /></Link>
+        <Link href="/notifications" className="p-3 rounded-full hover:bg-gray-100 transition-colors relative"><Bell size={26} className="text-gray-400" /></Link>
+        <Link href="/profile" className="p-3 rounded-full hover:bg-gray-100 transition-colors"><User size={26} className="text-gray-400" /></Link>
+      </div>
+
     </div>
   );
 }

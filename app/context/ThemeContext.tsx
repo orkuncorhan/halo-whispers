@@ -24,8 +24,10 @@ interface ThemeContextType {
   getThemeColors: () => any;
   whispers: WhisperType[];
   addWhisper: (text: string, themeColor: string) => void;
-  deleteWhisper: (id: number) => void; // YENİ: Silme yeteneği
+  deleteWhisper: (id: number) => void;
   toggleLike: (id: number) => void;
+  isMoodSetToday: boolean;      // Bugün seçim yapıldı mı?
+  confirmMoodForToday: () => void; // Seçimi kilitleme fonksiyonu
 }
 
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
@@ -33,35 +35,87 @@ const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const [mood, setMoodState] = useState(50);
   const [username, setUsernameState] = useState<string | null>(null);
+  const [isMoodSetToday, setIsMoodSetToday] = useState(false);
   
-  const initialWhispers: WhisperType[] = [
-    { id: 1, username: "elara_sky", time: "2m", content: "Bugün metroda tanımadığım biri gülümsedi, bütün günüm aydınlandı.", hop: 24, color: "bg-amber-100", isLiked: false },
-    { id: 2, username: "deniz_mavi", time: "1h", content: "Sokaktaki kediler için su koymayı unutmayın. Küçük bir kap, büyük bir hayat.", hop: 156, color: "bg-blue-100", isLiked: false },
-  ];
-
-  const [whispers, setWhispers] = useState<WhisperType[]>(initialWhispers);
-
-  const [haloHistory, setHaloHistory] = useState([
-    { name: 'Mon', value: 40 }, { name: 'Tue', value: 35 }, { name: 'Wed', value: 60 },
-    { name: 'Thu', value: 50 }, { name: 'Fri', value: 75 }, { name: 'Sat', value: 80 },
-    { name: 'Sun', value: 50 },
+  const [whispers, setWhispers] = useState<WhisperType[]>([]);
+  
+  // Grafik için başlangıç (Boş veya sadece bugün)
+  const [haloHistory, setHaloHistory] = useState<{ name: string; value: number }[]>([
+    { name: 'Today', value: 50 } 
   ]);
 
+  // --- SİTE AÇILINCA HAFIZAYI OKU ---
   useEffect(() => {
     if (typeof window !== "undefined") {
       const savedName = localStorage.getItem("halo_username");
       const savedMood = localStorage.getItem("halo_mood");
       const savedWhispers = localStorage.getItem("halo_whispers");
+      const savedHistory = localStorage.getItem("halo_history");
+      const lastMoodDate = localStorage.getItem("halo_last_mood_date");
 
       if (savedName) setUsernameState(savedName);
       if (savedMood) setMoodState(parseInt(savedMood));
       if (savedWhispers) setWhispers(JSON.parse(savedWhispers));
+      if (savedHistory) setHaloHistory(JSON.parse(savedHistory));
+
+      // TARİH KONTROLÜ:
+      // Bugünün tarihi ile son kaydedilen tarih aynı mı?
+      const todayStr = new Date().toLocaleDateString();
+      if (lastMoodDate === todayStr) {
+        setIsMoodSetToday(true); // Evet, bugün zaten seçmiş.
+      } else {
+        setIsMoodSetToday(false); // Hayır, yeni bir gün (veya ilk kez).
+      }
     }
   }, []);
 
   const setMood = (newMood: number) => {
     setMoodState(newMood);
-    if (typeof window !== "undefined") localStorage.setItem("halo_mood", newMood.toString());
+    // Not: Burada hemen kaydetmiyoruz, kullanıcı "Enter"a basınca kesinleşecek.
+  };
+
+  // --- MOOD'U BUGÜNE KİLİTLE VE TARİHE EKLE ---
+  const confirmMoodForToday = () => {
+    const todayStr = new Date().toLocaleDateString();
+    const dayName = new Date().toLocaleDateString('en-US', { weekday: 'short' }); // Mon, Tue...
+    
+    setIsMoodSetToday(true);
+    
+    if (typeof window !== "undefined") {
+      localStorage.setItem("halo_mood", mood.toString());
+      localStorage.setItem("halo_last_mood_date", todayStr); // Tarihi atıyoruz
+    }
+
+    // Grafiği Güncelle
+    setHaloHistory(prev => {
+      const newHistory = [...prev];
+      const lastMoodDate = localStorage.getItem("halo_last_mood_date"); // Eskisini kontrol et
+
+      // Eğer bu tamamen yeni bir günse listeye ekle
+      // (Eğer bugün daha önce eklediyse, sadece sonuncuyu güncelle)
+      // Basit mantık: Eğer son kayıt bugüne ait değilse ekle.
+      
+      // Not: React state güncellemeleri asenkron olduğu için localstorage'dan kontrol daha güvenli
+      // Ama MVP için basitçe: Listeyi güncelle.
+      
+      // Eğer liste boşsa direkt ekle
+      if (newHistory.length === 0) {
+         newHistory.push({ name: dayName, value: mood });
+      } else {
+         // Son elemanı güncelle (Bugün tekrar tekrar değiştirirse diye)
+         // Gerçek bir günlük sistemde: Eğer tarih değiştiyse push, değişmediyse update yapılır.
+         // MVP için: Her zaman sonuncuyu güncel mood yapıyoruz, yeni gün kontrolünü sayfa açılışında yapıyoruz.
+         newHistory[newHistory.length - 1] = { name: dayName, value: mood };
+      }
+      
+      // Listeyi 7 günle sınırla
+      if (newHistory.length > 7) newHistory.shift();
+
+      if (typeof window !== "undefined") {
+        localStorage.setItem("halo_history", JSON.stringify(newHistory));
+      }
+      return newHistory;
+    });
   };
 
   const setUsername = (name: string) => {
@@ -87,10 +141,9 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     });
   };
 
-  // --- YENİ: SİLME FONKSİYONU ---
   const deleteWhisper = (id: number) => {
     setWhispers((prev) => {
-      const updated = prev.filter(w => w.id !== id); // ID'si eşleşmeyeni tut (eşleşeni at)
+      const updated = prev.filter(w => w.id !== id);
       if (typeof window !== "undefined") localStorage.setItem("halo_whispers", JSON.stringify(updated));
       return updated;
     });
@@ -113,7 +166,9 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const logout = () => {
     setUsernameState(null);
     setMoodState(50);
-    setWhispers(initialWhispers);
+    setWhispers([]);
+    setHaloHistory([{ name: 'Today', value: 50 }]);
+    setIsMoodSetToday(false);
     if (typeof window !== "undefined") localStorage.clear();
   };
 
@@ -124,7 +179,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   };
 
   return (
-    <ThemeContext.Provider value={{ mood, setMood, username, setUsername, haloHistory, logout, getThemeColors, whispers, addWhisper, deleteWhisper, toggleLike }}>
+    <ThemeContext.Provider value={{ mood, setMood, username, setUsername, haloHistory, logout, getThemeColors, whispers, addWhisper, deleteWhisper, toggleLike, isMoodSetToday, confirmMoodForToday }}>
       {children}
     </ThemeContext.Provider>
   );
