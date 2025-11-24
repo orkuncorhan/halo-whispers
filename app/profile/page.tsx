@@ -1,11 +1,12 @@
 // DOSYA: app/profile/page.tsx
+// Path fix update
 "use client";
 
 import React, { useState, useEffect } from "react";
 import { createPortal } from "react-dom";
 import { motion, AnimatePresence } from "framer-motion";
-// DÜZELTME: Sadece bir adım geri çıkıyoruz (../)
-import { useTheme, WhisperType } from "../context/ThemeContext";
+// KESİN ÇÖZÜM: @ alias'ı kullanıyoruz. Bu sayede dosya nerede olursa olsun Context'i bulur.
+import { useTheme, WhisperType } from "@/app/context/ThemeContext";
 import Link from "next/link";
 import { ArrowLeft, Settings, Camera, Edit3, Check, Share2, X, Download, Copy, Home, Bell, User, Star, MessageCircle, Trash2 } from "lucide-react";
 import { LineChart, Line, XAxis, Tooltip, ResponsiveContainer } from "recharts";
@@ -50,7 +51,7 @@ export default function ProfilePage() {
     if (username) { setLocalName(username); }
   }, [username]);
 
-  // Yedek grafik verisi
+  // Yedek grafik verisi (Eğer history boşsa bunu kullanır)
   const data = [
     { name: 'Mon', value: 30 }, { name: 'Tue', value: 45 }, { name: 'Wed', value: 60 },
     { name: 'Thu', value: 50 }, { name: 'Fri', value: 80 }, { name: 'Sat', value: 95 },
@@ -115,7 +116,7 @@ export default function ProfilePage() {
             </div>
           </motion.div>
 
-          {/* GRAFİK */}
+          {/* GRAFİK VE PAYLAŞIM */}
           <div className="mt-8 grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
             <div className="md:col-span-2 bg-white/40 backdrop-blur-md border border-white/60 rounded-[32px] p-6 shadow-lg">
               <h3 className="text-sm font-bold text-gray-400 tracking-widest uppercase mb-6">Your Halo Journey</h3>
