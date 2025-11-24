@@ -4,14 +4,15 @@
 import React, { useState, useEffect } from "react";
 import { createPortal } from "react-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { useTheme } from "@/app/context/ThemeContext";
+// Relative path ve WhisperType eklendi
+import { useTheme, WhisperType } from "../context/ThemeContext";
 import Link from "next/link";
-import { ArrowLeft, Settings, Camera, Edit3, Check, Share2, X, Download, Copy, Home, Bell, User } from "lucide-react";
+import { ArrowLeft, Settings, Camera, Edit3, Check, Share2, X, Download, Copy, Home, Bell, User, Star, MessageCircle } from "lucide-react";
 import { LineChart, Line, XAxis, Tooltip, ResponsiveContainer } from "recharts";
 
 export default function ProfilePage() {
-  // Global Hafızadan 'username'i çekiyoruz!
-  const { getThemeColors, mood, username, setUsername } = useTheme(); 
+  // whispers verisini de çekiyoruz
+  const { getThemeColors, mood, username, setUsername, whispers } = useTheme();
   const theme = getThemeColors();
 
   // --- STATE'LER ---
@@ -20,21 +21,26 @@ export default function ProfilePage() {
   const [mounted, setMounted] = useState(false);
   const [bio, setBio] = useState("Işık arayan bir gezgin. ✨");
   
-  // İsim State'i artık doğrudan globalden geliyor.
-  // Edit modunda değişirse globali de güncelleyeceğiz.
-  const [localName, setLocalName] = useState(username);
+  // Null check
+  const [localName, setLocalName] = useState(username || "Halo Walker");
 
-  // Kullanıcı adı değişince globali de güncelle
+  // --- KULLANICININ KENDİ FISILTILARINI FİLTRELE ---
+  // (Kaybolan kısım burasıydı, geri geldi)
+  const myWhispers = whispers.filter(w => w.isUserPost === true);
+
   const handleSaveProfile = () => {
     setIsEditing(false);
-    setUsername(localName); // Kalıcı hafızaya yaz
+    setUsername(localName);
   };
 
   useEffect(() => {
     setMounted(true);
-  }, []);
+    if (username) {
+        setLocalName(username);
+    }
+  }, [username]);
 
-  // --- DUMMY DATA ---
+  // --- DUMMY GRAFİK VERİSİ ---
   const data = [
     { name: 'Mon', value: 30 },
     { name: 'Tue', value: 45 },
@@ -45,14 +51,21 @@ export default function ProfilePage() {
     { name: 'Sun', value: mood },
   ];
 
+  const displayUsername = username || "Halo Walker";
+
+  if (!mounted) return null;
+
   return (
     <>
+      {/* --- ANA SAYFA İÇERİĞİ --- */}
       <div className={`min-h-screen font-sans text-[#2D3436] transition-colors duration-1000 ${theme.bg} pb-24 md:pb-0 relative z-0`}>
         
+        {/* Arkaplan Gradienti */}
         <div className={`fixed inset-0 z-0 pointer-events-none bg-gradient-to-b opacity-40 transition-all duration-1000 ${theme.gradient}`} />
 
         <div className="relative z-10 max-w-2xl mx-auto pt-10 px-6">
           
+          {/* Header */}
           <div className="flex justify-between items-center mb-8">
             <Link href="/feed" className="p-3 rounded-full bg-white/50 hover:bg-white transition-all shadow-sm text-gray-600">
               <ArrowLeft size={24} />
@@ -62,6 +75,7 @@ export default function ProfilePage() {
             </Link>
           </div>
 
+          {/* PROFİL KARTI */}
           <motion.div 
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -99,11 +113,11 @@ export default function ProfilePage() {
                     className="text-3xl font-serif font-bold bg-white/50 border-b border-gray-300 outline-none w-full text-gray-800 px-2 py-1 rounded-lg" 
                   />
                 ) : (
-                  <h1 className="text-3xl font-serif font-bold text-gray-800">{username}</h1>
+                  <h1 className="text-3xl font-serif font-bold text-gray-800">{displayUsername}</h1>
                 )}
                 
                 <p className={`text-sm font-bold tracking-widest uppercase transition-colors ${theme.accent}`}>
-                  @{username.toLowerCase().replace(" ", "_")} • {theme.name} Aura
+                  @{displayUsername.toLowerCase().replace(" ", "_")} • {theme.name} Aura
                 </p>
 
                 {isEditing ? (
@@ -114,14 +128,15 @@ export default function ProfilePage() {
               </div>
 
               <div className="flex gap-8 mt-6 border-t border-gray-100 pt-6">
-                <div><span className="block text-xl font-bold text-gray-800">128</span><span className="text-xs text-gray-400 font-medium uppercase tracking-wider">Whispers</span></div>
+                <div><span className="block text-xl font-bold text-gray-800">{myWhispers.length}</span><span className="text-xs text-gray-400 font-medium uppercase tracking-wider">Whispers</span></div>
                 <div><span className="block text-xl font-bold text-gray-800">4.2k</span><span className="text-xs text-gray-400 font-medium uppercase tracking-wider">Hope</span></div>
                 <div><span className="block text-xl font-bold text-gray-800">850</span><span className="text-xs text-gray-400 font-medium uppercase tracking-wider">Following</span></div>
               </div>
             </div>
           </motion.div>
 
-          <div className="mt-8 grid grid-cols-1 md:grid-cols-3 gap-6">
+          {/* GRAFİK VE PAYLAŞIM */}
+          <div className="mt-8 grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
             <div className="md:col-span-2 bg-white/40 backdrop-blur-md border border-white/60 rounded-[32px] p-6 shadow-lg">
               <h3 className="text-sm font-bold text-gray-400 tracking-widest uppercase mb-6">Your Halo Journey</h3>
               <div className="h-48 w-full">
@@ -149,8 +164,33 @@ export default function ProfilePage() {
                </button>
             </div>
           </div>
+
+          {/* --- BENİM FISILTILARIM LİSTESİ (GERİ GELDİ!) --- */}
+          <div className="mb-20">
+            <h3 className="text-xs font-bold text-gray-400 tracking-widest uppercase mb-6 pl-2">Your Whispers</h3>
+            <div className="space-y-4">
+                {myWhispers.length === 0 ? (
+                    <p className="text-center text-gray-400 py-10 text-sm opacity-60">Henüz bir şey fısıldamadın.</p>
+                ) : (
+                    myWhispers.map((whisper) => (
+                        <div key={whisper.id} className="p-6 bg-white/40 border border-white/60 rounded-[24px] shadow-sm">
+                            <p className="text-gray-600 text-lg font-light mb-4">{whisper.content}</p>
+                            <div className="flex justify-between items-center text-xs text-gray-400">
+                                <span>{whisper.time}</span>
+                                <div className="flex gap-4">
+                                    <span className="flex gap-1 items-center"><Star size={14}/> {whisper.hop}</span>
+                                    <span className="flex gap-1 items-center"><MessageCircle size={14}/> 0</span>
+                                </div>
+                            </div>
+                        </div>
+                    ))
+                )}
+            </div>
+          </div>
+
         </div>
 
+        {/* Mobil Menü */}
         <div className="md:hidden fixed bottom-0 left-0 w-full bg-white/80 backdrop-blur-xl border-t border-gray-200 p-4 flex justify-around z-[50] pb-8">
           <Link href="/feed" className="p-2 text-gray-400 hover:text-gray-800"><Home size={24}/></Link>
           <Link href="/notifications" className="p-2 text-gray-400 hover:text-gray-800"><Bell size={24}/></Link>
@@ -158,10 +198,10 @@ export default function ProfilePage() {
         </div>
       </div>
 
+      {/* --- PORTAL MODAL --- */}
       <AnimatePresence>
         {showShareModal && mounted && createPortal(
           <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm">
-            
             <motion.div 
               initial={{ scale: 0.9, opacity: 0 }} 
               animate={{ scale: 1, opacity: 1 }} 
@@ -169,54 +209,32 @@ export default function ProfilePage() {
               transition={{ type: "spring", damping: 25, stiffness: 300 }}
               className="relative w-[360px] bg-white rounded-[32px] overflow-hidden shadow-2xl flex flex-col"
             >
-              
               <button onClick={() => setShowShareModal(false)} className="absolute top-4 right-4 z-30 p-2 bg-black/10 backdrop-blur-md rounded-full text-white hover:bg-black/20 transition-colors">
                 <X size={18} />
               </button>
-
+              
+              {/* STORY İÇERİĞİ */}
               <div className={`aspect-[9/16] w-full relative flex flex-col items-center justify-center text-center p-6 transition-colors duration-1000 ${theme.bg}`}>
-                 
                  <div className={`absolute inset-0 bg-gradient-to-br opacity-70 ${theme.gradient}`} />
                  <div className={`absolute top-[-10%] left-[-20%] w-64 h-64 rounded-full blur-[80px] ${theme.halo}`} />
                  <div className={`absolute bottom-[-10%] right-[-20%] w-64 h-64 rounded-full blur-[80px] ${theme.halo}`} />
-                 
                  <div className="relative z-10 flex flex-col items-center w-full">
-                    <div className="mb-8 opacity-50">
-                        <StarIcon className="w-6 h-6 text-gray-400" />
-                    </div>
-
-                    <div className={`w-28 h-28 rounded-full border-4 border-white shadow-xl flex items-center justify-center mb-4 ${theme.halo}`}>
-                        <div className="w-24 h-24 bg-white/40 backdrop-blur-md rounded-full" />
-                    </div>
-                    
-                    {/* BURASI ARTIK GLOBAL İSMİ GÖSTERİYOR */}
-                    <h2 className="text-3xl font-serif font-bold text-gray-800 mb-1">{username}</h2>
+                    <div className="mb-8 opacity-50"><StarIcon className="w-6 h-6 text-gray-400" /></div>
+                    <div className={`w-28 h-28 rounded-full border-4 border-white shadow-xl flex items-center justify-center mb-4 ${theme.halo}`}><div className="w-24 h-24 bg-white/40 backdrop-blur-md rounded-full" /></div>
+                    <h2 className="text-3xl font-serif font-bold text-gray-800 mb-1">{displayUsername}</h2>
                     <p className={`text-xs font-bold tracking-[0.3em] uppercase mb-8 ${theme.accent}`}>{theme.name} AURA</p>
-                    
                     <div className="bg-white/40 backdrop-blur-md border border-white/60 rounded-2xl p-5 w-full shadow-lg">
-                       <div className="flex justify-between text-gray-700 mb-2">
-                          <span className="text-[10px] font-bold uppercase text-gray-400">Total Hope</span>
-                          <span className="font-bold text-sm">4.2k ✨</span>
-                       </div>
-                       <div className="w-full h-1.5 bg-gray-200/50 rounded-full overflow-hidden mb-3">
-                          <div className={`h-full w-[80%] ${theme.button}`} />
-                       </div>
+                       <div className="flex justify-between text-gray-700 mb-2"><span className="text-[10px] font-bold uppercase text-gray-400">Total Hope</span><span className="font-bold text-sm">4.2k ✨</span></div>
+                       <div className="w-full h-1.5 bg-gray-200/50 rounded-full overflow-hidden mb-3"><div className={`h-full w-[80%] ${theme.button}`} /></div>
                        <p className="text-[10px] text-gray-500 font-light italic">"Whispering kindness since 2025"</p>
                     </div>
                  </div>
-
-                 <div className="absolute bottom-6 flex items-center gap-2 opacity-60">
-                    <span className="text-[10px] font-bold tracking-widest uppercase text-gray-500">Halo Whispers</span>
-                 </div>
+                 <div className="absolute bottom-6 flex items-center gap-2 opacity-60"><span className="text-[10px] font-bold tracking-widest uppercase text-gray-500">Halo Whispers</span></div>
               </div>
 
               <div className="bg-white p-4 flex gap-3 border-t border-gray-100">
-                <button className="flex-1 py-3 bg-[#2D3436] text-white rounded-xl font-bold text-xs flex items-center justify-center gap-2 hover:opacity-90 transition-opacity">
-                  <Download size={14} /> Save
-                </button>
-                <button className="flex-1 py-3 bg-gray-50 text-gray-600 border border-gray-200 rounded-xl font-bold text-xs flex items-center justify-center gap-2 hover:bg-gray-100 transition-colors">
-                  <Copy size={14} /> Link
-                </button>
+                <button className="flex-1 py-3 bg-[#2D3436] text-white rounded-xl font-bold text-xs flex items-center justify-center gap-2 hover:opacity-90 transition-opacity"><Download size={14} /> Save</button>
+                <button className="flex-1 py-3 bg-gray-50 text-gray-600 border border-gray-200 rounded-xl font-bold text-xs flex items-center justify-center gap-2 hover:bg-gray-100 transition-colors"><Copy size={14} /> Link</button>
               </div>
 
             </motion.div>

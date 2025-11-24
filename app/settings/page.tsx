@@ -3,13 +3,16 @@
 
 import React, { useState } from "react";
 import { motion } from "framer-motion";
-import { useTheme } from "@/app/context/ThemeContext";
+// DÜZELTME BURADA YAPILDI: (Relative Path)
+import { useTheme } from "../context/ThemeContext";
 import Link from "next/link";
 import { ArrowLeft, Bell, Moon, Shield, LogOut, Volume2, Eye } from "lucide-react";
+import { useRouter } from "next/navigation"; 
 
 export default function SettingsPage() {
-  const { getThemeColors, setMood, mood } = useTheme();
+  const { getThemeColors, setMood, mood, logout } = useTheme();
   const theme = getThemeColors();
+  const router = useRouter();
 
   // Ayarlar State'leri
   const [notifications, setNotifications] = useState(true);
@@ -99,7 +102,10 @@ export default function SettingsPage() {
           </Section>
 
           {/* --- ÇIKIŞ BUTONU --- */}
-          <button className="w-full py-4 mt-8 bg-white border border-red-100 text-red-500 font-bold rounded-2xl shadow-sm hover:bg-red-50 hover:shadow-md transition-all flex items-center justify-center gap-2">
+          <button 
+            onClick={() => { logout(); router.push("/login"); }}
+            className="w-full py-4 mt-8 bg-white border border-red-100 text-red-500 font-bold rounded-2xl shadow-sm hover:bg-red-50 hover:shadow-md transition-all flex items-center justify-center gap-2"
+          >
             <LogOut size={20} />
             Log Out
           </button>
