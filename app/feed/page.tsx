@@ -3,7 +3,7 @@
 
 import React, { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { MessageCircle, Share2, Star, Bell, User, Home, Sparkles } from "lucide-react";
+import { MessageCircle, Share2, Star, Bell, User, Home, Sparkles, Check } from "lucide-react";
 import { useTheme, WhisperType } from "../context/ThemeContext"; 
 import Link from "next/link"; 
 
@@ -20,14 +20,13 @@ export default function FeedPage() {
   };
 
   return (
-    // pb-24 ekledik ki en alttaki fısıltılar mobil menünün altında kalmasın
     <div className={`min-h-screen font-sans text-[#2D3436] transition-colors duration-1000 ${theme.bg} pb-24 md:pb-0`}>
       
       <div className={`fixed inset-0 z-0 pointer-events-none bg-gradient-to-br opacity-60 transition-all duration-1000 ${theme.gradient}`} />
       
       <div className="relative z-10 max-w-6xl mx-auto flex justify-center">
         
-        {/* --- SOL MENÜ (SADECE PC) --- */}
+        {/* SOL MENÜ */}
         <div className="hidden md:flex w-64 flex-col h-screen sticky top-0 pt-10 pr-8 border-r border-gray-200/50">
           <Link href="/feed" className="mb-10 flex items-center gap-3 group cursor-pointer">
              <div className={`w-8 h-8 rounded-full border border-white shadow-sm transition-colors duration-500 ${theme.halo} group-hover:scale-110`}></div>
@@ -45,20 +44,16 @@ export default function FeedPage() {
           </button>
         </div>
 
-        {/* --- ORTA AKIŞ --- */}
+        {/* ORTA AKIŞ */}
         <div className="w-full md:w-[600px] min-h-screen border-r border-gray-200/50 bg-white/40 backdrop-blur-xl">
           
-          {/* Header */}
           <div className="sticky top-0 z-20 bg-white/80 backdrop-blur-md border-b border-gray-100 px-6 py-4 flex justify-between items-center">
             <h2 className="font-serif text-xl font-bold">Stream</h2>
-            
-            {/* MOBİL İÇİN HALEYİ PROFİLE BAĞLADIK */}
             <Link href="/profile">
               <div className={`w-8 h-8 rounded-full transition-colors duration-1000 border border-white/50 shadow-sm ${theme.halo}`}></div>
             </Link>
           </div>
 
-          {/* Yazma Alanı */}
           <div className="p-6 border-b border-gray-100 bg-white/30 transition-colors">
             <div className="flex gap-4">
               <div className={`w-12 h-12 rounded-full flex-shrink-0 border-2 border-white shadow-sm transition-colors duration-500 ${theme.halo}`} />
@@ -79,7 +74,6 @@ export default function FeedPage() {
             </div>
           </div>
 
-          {/* Akış Listesi */}
           <div className="pb-4">
             <AnimatePresence>
               {whispers.map((whisper) => (
@@ -90,7 +84,7 @@ export default function FeedPage() {
 
         </div>
 
-        {/* --- SAĞ PANEL (SADECE PC) --- */}
+        {/* SAĞ PANEL */}
         <div className="hidden lg:block w-80 pl-8 pt-8">
           <div className="bg-white/50 rounded-2xl p-6 border border-white/60 shadow-sm sticky top-8">
             <h3 className="font-bold text-gray-400 text-[10px] tracking-widest uppercase mb-4 flex items-center gap-2">
@@ -106,32 +100,21 @@ export default function FeedPage() {
 
       </div>
 
-      {/* ========================================== */}
-      {/* --- MOBİL ALT MENÜ (BOTTOM NAVIGATION) --- */}
-      {/* ========================================== */}
+      {/* MOBİL ALT MENÜ */}
       <div className="md:hidden fixed bottom-0 left-0 w-full bg-white/90 backdrop-blur-xl border-t border-gray-200 p-2 flex justify-around items-center z-50 pb-6">
-        
-        <Link href="/feed" className="p-3 rounded-full hover:bg-gray-100 transition-colors">
-          <Home size={26} className={theme.accent} />
-        </Link>
-        
+        <Link href="/feed" className="p-3 rounded-full hover:bg-gray-100 transition-colors"><Home size={26} className={theme.accent} /></Link>
         <Link href="/notifications" className="p-3 rounded-full hover:bg-gray-100 transition-colors relative">
           <Bell size={26} className="text-gray-400" />
-          {/* Bildirim Noktası (Örnek) */}
           <div className="absolute top-3 right-3 w-2 h-2 bg-red-400 rounded-full border border-white"></div>
         </Link>
-        
-        <Link href="/profile" className="p-3 rounded-full hover:bg-gray-100 transition-colors">
-          <User size={26} className="text-gray-400" />
-        </Link>
-
+        <Link href="/profile" className="p-3 rounded-full hover:bg-gray-100 transition-colors"><User size={26} className="text-gray-400" /></Link>
       </div>
 
     </div>
   );
 }
 
-// --- ALT BİLEŞENLER (Aynı kaldı) ---
+// --- ALT BİLEŞENLER ---
 
 function NavItem({ icon, text, active = false, themeColor }: any) {
   return (
@@ -144,6 +127,35 @@ function NavItem({ icon, text, active = false, themeColor }: any) {
 
 function WhisperCard({ data, themeAccent }: { data: WhisperType, themeAccent: string }) {
   const { toggleLike } = useTheme();
+  
+  // Paylaşım Durumu için State
+  const [isCopied, setIsCopied] = useState(false);
+
+  const handleShare = async (e: React.MouseEvent) => {
+    e.stopPropagation(); // Sayfa değişimini engelle
+    
+    // Paylaşılacak Link
+    const url = `${window.location.origin}/whisper/${data.id}`;
+
+    // Eğer Mobilse veya Destekliyorsa Native Paylaşımı Aç
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: `Halo Whispers from @${data.username}`,
+          text: `"${data.content}"`,
+          url: url,
+        });
+      } catch (err) {
+        console.log("Paylaşım iptal edildi");
+      }
+    } else {
+      // Masaüstü ise Kopyala
+      navigator.clipboard.writeText(url);
+      setIsCopied(true);
+      setTimeout(() => setIsCopied(false), 2000); // 2 saniye sonra eski haline dön
+    }
+  };
+
   return (
     <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} layout className="p-6 border-b border-gray-100 hover:bg-white/40 transition-colors cursor-pointer group">
       <div className="flex gap-4">
@@ -160,17 +172,33 @@ function WhisperCard({ data, themeAccent }: { data: WhisperType, themeAccent: st
           <Link href={`/whisper/${data.id}`}>
             <p className="text-gray-600 leading-relaxed mb-3 font-light text-[17px]">{data.content}</p>
           </Link>
+          
           <div className="flex gap-12 text-gray-400">
+            
+            {/* LIKE */}
             <button onClick={(e) => { e.stopPropagation(); toggleLike(data.id); }} className={`flex items-center gap-2 transition-colors group/btn ${data.isLiked ? themeAccent : 'hover:text-yellow-500'}`}>
               <div className={`p-2 rounded-full transition-colors ${data.isLiked ? 'bg-yellow-50' : 'group-hover/btn:bg-yellow-50'}`}><Star size={18} fill={data.isLiked ? "currentColor" : "none"} /></div>
               <span className="text-sm font-medium">{data.hop}</span>
             </button>
+            
+            {/* REPLY */}
             <Link href={`/whisper/${data.id}`}>
                 <button className="flex items-center gap-2 hover:text-blue-500 transition-colors group/btn">
                 <div className="p-2 rounded-full group-hover/btn:bg-blue-50"><MessageCircle size={18} /></div>
                 </button>
             </Link>
-            <button className="flex-1 py-0"><Share2 size={18} /></button>
+
+            {/* SHARE (GÜNCELLENDİ) */}
+            <button 
+              onClick={handleShare} 
+              className={`flex items-center gap-2 transition-colors group/btn ${isCopied ? 'text-green-500' : 'hover:text-green-500'}`}
+            >
+              <div className={`p-2 rounded-full transition-colors ${isCopied ? 'bg-green-50' : 'group-hover/btn:bg-green-50'}`}>
+                {isCopied ? <Check size={18} /> : <Share2 size={18} />}
+              </div>
+              {isCopied && <span className="text-xs font-bold">Copied!</span>}
+            </button>
+
           </div>
         </div>
       </div>

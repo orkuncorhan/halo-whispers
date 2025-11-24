@@ -1,8 +1,8 @@
 // DOSYA: app/layout.tsx
-import type { Metadata } from "next";
-import { Inter, Cormorant_Garamond } from "next/font/google"; // Google Fontları
+import type { Metadata, Viewport } from "next";
+import { Inter, Cormorant_Garamond } from "next/font/google"; 
 import "./globals.css";
-import { ThemeProvider } from "./context/ThemeContext"; // Yeni beynimizi çağırdık
+import { ThemeProvider } from "./context/ThemeContext"; 
 
 const inter = Inter({ subsets: ["latin"], variable: '--font-inter' });
 const cormorant = Cormorant_Garamond({ 
@@ -14,6 +14,16 @@ const cormorant = Cormorant_Garamond({
 export const metadata: Metadata = {
   title: "Halo Whispers",
   description: "Whisper kindness, gather hope.",
+  manifest: "/manifest.json", // Manifesti tanıttık
+};
+
+// MOBİL AYARLARI (YENİ EKLENEN KISIM)
+export const viewport: Viewport = {
+  themeColor: "#F4F6F9",
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 1, // Kullanıcı zoom yapıp tasarımı bozamasın
+  userScalable: false,
 };
 
 export default function RootLayout({
@@ -24,7 +34,6 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={`${inter.variable} ${cormorant.variable} font-sans`}>
-        {/* Tüm siteyi ThemeProvider ile sarıyoruz */}
         <ThemeProvider>
           {children}
         </ThemeProvider>
