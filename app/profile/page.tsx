@@ -4,7 +4,7 @@
 import React, { useState, useEffect } from "react";
 import { createPortal } from "react-dom";
 import { motion, AnimatePresence } from "framer-motion";
-// DÜZELTME: Sadece bir kat yukarı çıkıyoruz (../)
+// DÜZELTME: Sadece bir adım geri çıkıyoruz (../)
 import { useTheme, WhisperType } from "../context/ThemeContext";
 import Link from "next/link";
 import { ArrowLeft, Settings, Camera, Edit3, Check, Share2, X, Download, Copy, Home, Bell, User, Star, MessageCircle, Trash2 } from "lucide-react";
@@ -29,7 +29,7 @@ export default function ProfilePage() {
     setUsername(localName);
   };
 
-  // FOTOĞRAF İNDİRME
+  // FOTOĞRAF İNDİRME FONKSİYONU
   const handleDownloadCard = async () => {
     const node = document.getElementById('share-halo-card');
     if (node) {
@@ -50,13 +50,10 @@ export default function ProfilePage() {
     if (username) { setLocalName(username); }
   }, [username]);
 
+  // Yedek grafik verisi
   const data = [
-    { name: 'Mon', value: 30 },
-    { name: 'Tue', value: 45 },
-    { name: 'Wed', value: 60 },
-    { name: 'Thu', value: 50 },
-    { name: 'Fri', value: 80 },
-    { name: 'Sat', value: 95 },
+    { name: 'Mon', value: 30 }, { name: 'Tue', value: 45 }, { name: 'Wed', value: 60 },
+    { name: 'Thu', value: 50 }, { name: 'Fri', value: 80 }, { name: 'Sat', value: 95 },
     { name: 'Sun', value: mood },
   ];
 
@@ -157,7 +154,6 @@ export default function ProfilePage() {
                                 <span>{whisper.time}</span>
                                 <div className="flex gap-4">
                                     <span className="flex gap-1 items-center"><Star size={14}/> {whisper.hop}</span>
-                                    <span className="flex gap-1 items-center"><MessageCircle size={14}/> 0</span>
                                 </div>
                             </div>
                         </div>
@@ -180,9 +176,11 @@ export default function ProfilePage() {
       <AnimatePresence>
         {showShareModal && mounted && createPortal(
           <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm">
+            
             <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }} transition={{ type: "spring", damping: 25, stiffness: 300 }} className="relative w-[360px] bg-white rounded-[32px] overflow-hidden shadow-2xl flex flex-col">
               <button onClick={() => setShowShareModal(false)} className="absolute top-4 right-4 z-30 p-2 bg-black/10 backdrop-blur-md rounded-full text-white hover:bg-black/20 transition-colors"><X size={18} /></button>
               
+              {/* ID: share-halo-card (Fotoğrafı çekilecek alan) */}
               <div id="share-halo-card" className={`aspect-[9/16] w-full relative flex flex-col items-center justify-center text-center p-6 transition-colors duration-1000 ${theme.bg}`}>
                  <div className={`absolute inset-0 bg-gradient-to-br opacity-70 ${theme.gradient}`} />
                  <div className={`absolute top-[-10%] left-[-20%] w-64 h-64 rounded-full blur-[80px] ${theme.halo}`} />
@@ -202,6 +200,7 @@ export default function ProfilePage() {
               </div>
 
               <div className="bg-white p-4 flex gap-3 border-t border-gray-100">
+                {/* İNDİRME BUTONU */}
                 <button onClick={handleDownloadCard} className="flex-1 py-3 bg-[#2D3436] text-white rounded-xl font-bold text-xs flex items-center justify-center gap-2 hover:opacity-90 transition-opacity"><Download size={14} /> Save</button>
                 <button className="flex-1 py-3 bg-gray-50 text-gray-600 border border-gray-200 rounded-xl font-bold text-xs flex items-center justify-center gap-2 hover:bg-gray-100 transition-colors"><Copy size={14} /> Link</button>
               </div>
