@@ -3,20 +3,19 @@
 
 import React, { useState, use } from "react";
 import { motion } from "framer-motion";
-// DÜZELTME BURADA: İki nokta (../../) ile iki üst klasöre çıkıyoruz
+// DÜZELTME 1: İki kat yukarı çıkıyoruz (../../)
 import { useTheme } from "../../context/ThemeContext";
 import Link from "next/link";
-import { ArrowLeft, MessageCircle, Star, Share2, UserPlus, Check, Home, Bell, User } from "lucide-react";
+import { ArrowLeft, Star, Share2, UserPlus, Check, Home, Bell, User, MessageCircle } from "lucide-react";
 
 export default function UserProfilePage({ params }: { params: Promise<{ username: string }> }) {
-  const { getThemeColors, whispers } = useTheme();
-  const theme = getThemeColors();
+  // useTheme'i güvenli şekilde çekiyoruz
+  const themeContext = useTheme();
+  const theme = themeContext ? themeContext.getThemeColors() : { bg: "bg-gray-50", halo: "bg-gray-200", accent: "text-gray-800" };
   
-  // Params verisini çözme
   const resolvedParams = use(params);
   const username = resolvedParams.username; 
 
-  // DUMMY DATA (Kullanıcı Profili)
   const userProfile = {
     name: username.charAt(0).toUpperCase() + username.slice(1).replace("_", " "), 
     bio: "Gökyüzüne notlar bırakıyorum. 🌙✨",
@@ -25,8 +24,6 @@ export default function UserProfilePage({ params }: { params: Promise<{ username
     stats: { whispers: 42, hope: 890, following: 150 }
   };
 
-  // O kullanıcının fısıltılarını bul (Şimdilik dummy veri ile karışık yapıyoruz)
-  // Gerçekte burada veritabanından o kişinin ID'sine göre çekmek gerekir.
   const userWhispers = [
     { id: 1, content: "Bazen sadece durup derin bir nefes almak, dünyayı yavaşlatmaya yeter.", time: "2h ago", hop: 45 },
     { id: 2, content: "Kendine nazik ol, sen de bir bahçesin ve bazen dinlenmeye ihtiyacın var.", time: "1d ago", hop: 120 },
@@ -105,7 +102,8 @@ export default function UserProfilePage({ params }: { params: Promise<{ username
         <h3 className="text-xs font-bold text-gray-400 tracking-widest uppercase mb-6 pl-2">Recent Whispers</h3>
         
         <div className="space-y-4">
-          {userWhispers.map((whisper) => (
+          {/* DÜZELTME 2: (whisper: any) diyerek TypeScript'i susturduk */}
+          {userWhispers.map((whisper: any) => (
             <motion.div 
               key={whisper.id}
               initial={{ opacity: 0, y: 10 }}
