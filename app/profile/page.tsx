@@ -4,8 +4,8 @@
 import React, { useState, useEffect } from "react";
 import { createPortal } from "react-dom";
 import { motion, AnimatePresence } from "framer-motion";
-// KESİN ÇÖZÜM: @ işareti ile tam adres veriyoruz
-import { useTheme, WhisperType } from "@/app/context/ThemeContext";
+// DÜZELTME: Sadece bir kat yukarı çıkıyoruz (../)
+import { useTheme, WhisperType } from "../context/ThemeContext";
 import Link from "next/link";
 import { ArrowLeft, Settings, Camera, Edit3, Check, Share2, X, Download, Copy, Home, Bell, User, Star, MessageCircle, Trash2 } from "lucide-react";
 import { LineChart, Line, XAxis, Tooltip, ResponsiveContainer } from "recharts";
@@ -21,6 +21,7 @@ export default function ProfilePage() {
   const [bio, setBio] = useState("Işık arayan bir gezgin. ✨");
   const [localName, setLocalName] = useState(username || "Halo Walker");
 
+  // Benim fısıltılarım
   const myWhispers = whispers.filter(w => w.isUserPost === true);
 
   const handleSaveProfile = () => {
@@ -28,6 +29,7 @@ export default function ProfilePage() {
     setUsername(localName);
   };
 
+  // FOTOĞRAF İNDİRME
   const handleDownloadCard = async () => {
     const node = document.getElementById('share-halo-card');
     if (node) {
@@ -49,8 +51,12 @@ export default function ProfilePage() {
   }, [username]);
 
   const data = [
-    { name: 'Mon', value: 30 }, { name: 'Tue', value: 45 }, { name: 'Wed', value: 60 },
-    { name: 'Thu', value: 50 }, { name: 'Fri', value: 80 }, { name: 'Sat', value: 95 },
+    { name: 'Mon', value: 30 },
+    { name: 'Tue', value: 45 },
+    { name: 'Wed', value: 60 },
+    { name: 'Thu', value: 50 },
+    { name: 'Fri', value: 80 },
+    { name: 'Sat', value: 95 },
     { name: 'Sun', value: mood },
   ];
 
@@ -65,11 +71,14 @@ export default function ProfilePage() {
         <div className={`fixed inset-0 z-0 pointer-events-none bg-gradient-to-b opacity-40 transition-all duration-1000 ${theme.gradient}`} />
 
         <div className="relative z-10 max-w-2xl mx-auto pt-10 px-6">
+          
+          {/* HEADER */}
           <div className="flex justify-between items-center mb-8">
             <Link href="/feed" className="p-3 rounded-full bg-white/50 hover:bg-white transition-all shadow-sm text-gray-600"><ArrowLeft size={24} /></Link>
             <Link href="/settings" className="p-3 rounded-full bg-white/50 hover:bg-white transition-all shadow-sm text-gray-600"><Settings size={24} /></Link>
           </div>
 
+          {/* PROFİL KARTI */}
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="bg-white/40 backdrop-blur-xl border border-white/60 rounded-[40px] shadow-xl overflow-hidden relative">
             <div className={`h-32 w-full transition-colors duration-1000 ${theme.halo} opacity-50`} />
             <div className="px-8 pb-8">
@@ -109,6 +118,7 @@ export default function ProfilePage() {
             </div>
           </motion.div>
 
+          {/* GRAFİK */}
           <div className="mt-8 grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
             <div className="md:col-span-2 bg-white/40 backdrop-blur-md border border-white/60 rounded-[32px] p-6 shadow-lg">
               <h3 className="text-sm font-bold text-gray-400 tracking-widest uppercase mb-6">Your Halo Journey</h3>
@@ -122,6 +132,7 @@ export default function ProfilePage() {
                 </ResponsiveContainer>
               </div>
             </div>
+
             <div className={`md:col-span-1 rounded-[32px] p-6 shadow-lg flex flex-col justify-between text-white transition-colors duration-1000 ${theme.halo.replace("bg-", "bg-gradient-to-br from-").replace("100", "400").replace("200", "500") + " to-gray-400"}`}>
                <div>
                  <StarIcon className="mb-4 opacity-80" />
@@ -132,6 +143,7 @@ export default function ProfilePage() {
             </div>
           </div>
 
+          {/* YOUR WHISPERS */}
           <div className="mb-20">
             <h3 className="text-xs font-bold text-gray-400 tracking-widest uppercase mb-6 pl-2">Your Whispers</h3>
             <div className="space-y-4">
@@ -145,6 +157,7 @@ export default function ProfilePage() {
                                 <span>{whisper.time}</span>
                                 <div className="flex gap-4">
                                     <span className="flex gap-1 items-center"><Star size={14}/> {whisper.hop}</span>
+                                    <span className="flex gap-1 items-center"><MessageCircle size={14}/> 0</span>
                                 </div>
                             </div>
                         </div>
@@ -155,6 +168,7 @@ export default function ProfilePage() {
 
         </div>
 
+        {/* Mobil Menü */}
         <div className="md:hidden fixed bottom-0 left-0 w-full bg-white/80 backdrop-blur-xl border-t border-gray-200 p-4 flex justify-around z-[50] pb-8">
           <Link href="/feed" className="p-2 text-gray-400 hover:text-gray-800"><Home size={24}/></Link>
           <Link href="/notifications" className="p-2 text-gray-400 hover:text-gray-800"><Bell size={24}/></Link>
@@ -162,11 +176,13 @@ export default function ProfilePage() {
         </div>
       </div>
 
+      {/* --- MODAL (SHARE CARD) --- */}
       <AnimatePresence>
         {showShareModal && mounted && createPortal(
           <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm">
             <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }} transition={{ type: "spring", damping: 25, stiffness: 300 }} className="relative w-[360px] bg-white rounded-[32px] overflow-hidden shadow-2xl flex flex-col">
               <button onClick={() => setShowShareModal(false)} className="absolute top-4 right-4 z-30 p-2 bg-black/10 backdrop-blur-md rounded-full text-white hover:bg-black/20 transition-colors"><X size={18} /></button>
+              
               <div id="share-halo-card" className={`aspect-[9/16] w-full relative flex flex-col items-center justify-center text-center p-6 transition-colors duration-1000 ${theme.bg}`}>
                  <div className={`absolute inset-0 bg-gradient-to-br opacity-70 ${theme.gradient}`} />
                  <div className={`absolute top-[-10%] left-[-20%] w-64 h-64 rounded-full blur-[80px] ${theme.halo}`} />
@@ -184,10 +200,12 @@ export default function ProfilePage() {
                  </div>
                  <div className="absolute bottom-6 flex items-center gap-2 opacity-60"><span className="text-[10px] font-bold tracking-widest uppercase text-gray-500">Halo Whispers</span></div>
               </div>
+
               <div className="bg-white p-4 flex gap-3 border-t border-gray-100">
                 <button onClick={handleDownloadCard} className="flex-1 py-3 bg-[#2D3436] text-white rounded-xl font-bold text-xs flex items-center justify-center gap-2 hover:opacity-90 transition-opacity"><Download size={14} /> Save</button>
                 <button className="flex-1 py-3 bg-gray-50 text-gray-600 border border-gray-200 rounded-xl font-bold text-xs flex items-center justify-center gap-2 hover:bg-gray-100 transition-colors"><Copy size={14} /> Link</button>
               </div>
+
             </motion.div>
           </div>
         , document.body)}
