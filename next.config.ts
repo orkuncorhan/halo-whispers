@@ -9,14 +9,16 @@ const withPWA = require('next-pwa')({
 });
 
 const nextConfig = {
-  // --- İŞTE SİHİRLİ KODLAR BURADA ---
-  // Vercel'e "Hataları görmezden gel, sadece siteyi aç" diyoruz.
+  // 1. TypeScript hatalarını görmezden gel (Build için şart)
   typescript: {
     ignoreBuildErrors: true,
   },
-  eslint: {
-    ignoreDuringBuilds: true,
-  },
+  
+  // 2. Eslint bloğunu SİLDİK (Artık desteklenmiyor)
+
+  // 3. Turbopack/Webpack çakışmasını çözen sihirli satır (Hata mesajının önerisi)
+  // @ts-ignore
+  turbopack: {}, 
 };
 
 module.exports = withPWA(nextConfig);
