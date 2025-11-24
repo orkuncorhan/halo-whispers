@@ -3,7 +3,6 @@
 
 import React, { createContext, useContext, useState, useEffect } from "react";
 
-// Fısıltı Tipi (GÜNCELLENDİ: isLiked eklendi)
 export interface WhisperType {
   id: number;
   username: string;
@@ -12,7 +11,7 @@ export interface WhisperType {
   hop: number;
   color: string;
   isUserPost?: boolean;
-  isLiked?: boolean; // Kullanıcı bunu beğendi mi?
+  isLiked?: boolean;
 }
 
 interface ThemeContextType {
@@ -25,7 +24,8 @@ interface ThemeContextType {
   getThemeColors: () => any;
   whispers: WhisperType[];
   addWhisper: (text: string, themeColor: string) => void;
-  toggleLike: (id: number) => void; // YENİ FONKSİYON
+  deleteWhisper: (id: number) => void; // YENİ: Silme yeteneği
+  toggleLike: (id: number) => void;
 }
 
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
@@ -87,18 +87,21 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     });
   };
 
-  // --- YENİ: LIKE (HOP) İŞLEVİ ---
+  // --- YENİ: SİLME FONKSİYONU ---
+  const deleteWhisper = (id: number) => {
+    setWhispers((prev) => {
+      const updated = prev.filter(w => w.id !== id); // ID'si eşleşmeyeni tut (eşleşeni at)
+      if (typeof window !== "undefined") localStorage.setItem("halo_whispers", JSON.stringify(updated));
+      return updated;
+    });
+  };
+
   const toggleLike = (id: number) => {
     setWhispers(prev => {
       const updated = prev.map(w => {
         if (w.id === id) {
-          // Eğer zaten beğenildiyse azalt (-1), beğenilmediyse artır (+1)
           const isLiked = !!w.isLiked;
-          return {
-            ...w,
-            isLiked: !isLiked,
-            hop: isLiked ? w.hop - 1 : w.hop + 1
-          };
+          return { ...w, isLiked: !isLiked, hop: isLiked ? w.hop - 1 : w.hop + 1 };
         }
         return w;
       });
@@ -121,7 +124,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   };
 
   return (
-    <ThemeContext.Provider value={{ mood, setMood, username, setUsername, haloHistory, logout, getThemeColors, whispers, addWhisper, toggleLike }}>
+    <ThemeContext.Provider value={{ mood, setMood, username, setUsername, haloHistory, logout, getThemeColors, whispers, addWhisper, deleteWhisper, toggleLike }}>
       {children}
     </ThemeContext.Provider>
   );

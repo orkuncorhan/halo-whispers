@@ -3,16 +3,30 @@
 
 import React, { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import Link from "next/link";
+import { useRouter } from "next/navigation"; // Yönlendirme motoru
+// Relative path
 import { useTheme } from "../context/ThemeContext";
 
 export default function HaloWhispersMood() {
-  const { mood, setMood } = useTheme(); // Global hafızadan çekiyoruz
+  // 'username' bilgisini de çekiyoruz ki kontrol edelim
+  const { mood, setMood, username } = useTheme(); 
   const [mounted, setMounted] = useState(false);
+  const router = useRouter();
 
   useEffect(() => {
     setMounted(true);
   }, []);
+
+  // --- AKILLI GEÇİŞ FONKSİYONU ---
+  const handleEnter = () => {
+    // Eğer hafızada zaten bir isim varsa, Login'i atla, direkt Feed'e git
+    if (username && username !== "Halo Walker") {
+      router.push("/feed");
+    } else {
+      // İsim yoksa (ilk geliş), isim sormaya (Login) git
+      router.push("/login");
+    }
+  };
 
   // RENK MANTIĞI
   const getColors = (val: number) => {
@@ -127,12 +141,14 @@ export default function HaloWhispersMood() {
             </div>
           </div>
 
-          {/* Buton - Login'e gider */}
-          <Link href="/login" className="w-full block">
-            <button className="w-full py-4 md:py-5 bg-[#2D3436] text-white rounded-2xl text-xs md:text-sm font-medium tracking-wider shadow-xl hover:bg-black hover:scale-[1.02] transition-all duration-300">
-              Enter the Stream
-            </button>
-          </Link>
+          {/* BUTON (DEĞİŞEN KISIM) */}
+          {/* Artık Link değil, Button. Tıklayınca kontrol edip yönlendiriyor. */}
+          <button 
+            onClick={handleEnter}
+            className="w-full py-4 md:py-5 bg-[#2D3436] text-white rounded-2xl text-xs md:text-sm font-medium tracking-wider shadow-xl hover:bg-black hover:scale-[1.02] transition-all duration-300"
+          >
+            Enter the Stream
+          </button>
 
         </div>
       </div>
