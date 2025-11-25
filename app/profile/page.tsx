@@ -5,7 +5,7 @@ import React, { useState, useEffect } from "react";
 import { createPortal } from "react-dom";
 import { motion, AnimatePresence } from "framer-motion";
 // DÜZELTME BURADA: Sadece bir kat yukarı çıkıyoruz (../)
-import { useTheme, WhisperType } from "../context/ThemeContext";
+import { useTheme } from "@/app/context/ThemeContext";
 import Link from "next/link";
 import { ArrowLeft, Settings, Camera, Edit3, Check, Share2, X, Download, Copy, Home, Bell, User, Star, MessageCircle, Trash2 } from "lucide-react";
 import { LineChart, Line, XAxis, Tooltip, ResponsiveContainer } from "recharts";
