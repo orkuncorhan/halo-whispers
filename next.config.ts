@@ -1,11 +1,12 @@
-// DOSYA: next.config.ts
+// next.config.ts
+
 /** @type {import('next').NextConfig} */
 
-const withPWA = require('next-pwa')({
-  dest: 'public',
+const withPWA = require("next-pwa")({
+  dest: "public",
   register: true,
   skipWaiting: true,
-  disable: process.env.NODE_ENV === 'development',
+  disable: process.env.NODE_ENV === "development",
 });
 
 const nextConfig = {
@@ -15,7 +16,7 @@ const nextConfig = {
   eslint: {
     ignoreDuringBuilds: true,
   },
-  // Turbopack ayarına gerek kalmadı çünkü package.json'dan Webpack'i seçtik
+  turbopack: {}, // Turbopack'i bilinçli olarak kullanıyoruz, uyarıyı sustur
 };
 
 module.exports = withPWA(nextConfig);
