@@ -8,19 +8,22 @@ const withPWA = require('next-pwa')({
   disable: process.env.NODE_ENV === 'development',
 });
 
+// Temel ayarlar
 const nextConfig = {
-  // 1. Hataları Görmezden Gel (Build geçsin)
   typescript: {
     ignoreBuildErrors: true,
   },
   eslint: {
     ignoreDuringBuilds: true,
   },
-  
-  // 2. VERCEL HATASINI ÇÖZEN SİHİRLİ SATIR
-  // Bu satır, "Webpack config var ama Turbopack kullanıyorsun" hatasını susturur.
-  turbopack: {},
 };
 
-// Konfigürasyonu dışarı aktar
-module.exports = withPWA(nextConfig);
+// 1. Önce PWA ile ayarları sarmalıyoruz
+const pwaConfig = withPWA(nextConfig);
+
+// 2. Sonra 'turbopack' ayarını EN SONA, ELLE ekliyoruz
+// (Böylece eklenti bunu silemiyor)
+module.exports = {
+  ...pwaConfig,
+  turbopack: {}, 
+};
