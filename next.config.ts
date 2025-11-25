@@ -8,7 +8,6 @@ const withPWA = require('next-pwa')({
   disable: process.env.NODE_ENV === 'development',
 });
 
-// Temel ayarlar
 const nextConfig = {
   typescript: {
     ignoreBuildErrors: true,
@@ -16,14 +15,7 @@ const nextConfig = {
   eslint: {
     ignoreDuringBuilds: true,
   },
+  // Turbopack ayarına gerek kalmadı çünkü package.json'dan Webpack'i seçtik
 };
 
-// 1. Önce PWA ile ayarları sarmalıyoruz
-const pwaConfig = withPWA(nextConfig);
-
-// 2. Sonra 'turbopack' ayarını EN SONA, ELLE ekliyoruz
-// (Böylece eklenti bunu silemiyor)
-module.exports = {
-  ...pwaConfig,
-  turbopack: {}, 
-};
+module.exports = withPWA(nextConfig);
