@@ -1,182 +1,191 @@
-// DOSYA: app/whisper/[id]/page.tsx
 "use client";
 
-import React, { useState, use, useEffect } from "react";
-import { motion } from "framer-motion";
-// DÜZELTME BURADA: Relative path (../../) kullandık
-import { useTheme, WhisperType } from "../../context/ThemeContext";
-import Link from "next/link";
-import { ArrowLeft, Star, MessageCircle, Share2, Send } from "lucide-react";
+import React, { FormEvent, useMemo, useState } from "react";
+import { useTheme, WhisperType, CommentType } from "../../context/ThemeContext";
 
-export default function WhisperDetail({ params }: { params: Promise<{ id: string }> }) {
-  const { getThemeColors, whispers, toggleLike, username } = useTheme();
+type WhisperDetailPageProps = {
+  params: { id: string };
+};
+
+export default function WhisperDetail({ params }: WhisperDetailPageProps) {
+  const {
+    whispers,
+    addComment,
+    deleteComment,
+    filterToxic,
+    getThemeColors,
+    username,
+  } = useTheme();
+
   const theme = getThemeColors();
+  const whisperId = Number(params.id);
 
-  // URL'den ID'yi al
-  const resolvedParams = use(params);
-  const whisperId = Number(resolvedParams.id);
+  const whisper: WhisperType | undefined = useMemo(
+    () => whispers.find((w) => w.id === whisperId),
+    [whispers, whisperId]
+  );
+  const comments = whisper?.comments ?? [];
 
-  const [currentWhisper, setCurrentWhisper] = useState<WhisperType | undefined>(undefined);
-  const [isLoading, setIsLoading] = useState(true);
+  const [commentText, setCommentText] = useState("");
+  const [showWarning, setShowWarning] = useState(false);
 
-  useEffect(() => {
-    // Hata 2'nin çözümü: whispers artık Context'ten doğru tipte geldiği için
-    // TypeScript burada 'w'nin ne olduğunu anlar.
-    const found = whispers.find((w) => w.id === whisperId);
-    setCurrentWhisper(found);
-    setIsLoading(false);
-  }, [whisperId, whispers]);
-
-  // --- YORUM KISMI ---
-  const [replyText, setReplyText] = useState("");
-  const [comments, setComments] = useState([
-    { id: 101, username: "luna_moth", content: "Kesinlikle katılıyorum, harika bir his.", time: "1h", hop: 5 },
-  ]);
-
-  const handleSendReply = () => {
-    if (!replyText.trim()) return;
-    const newComment = {
-      id: Date.now(),
-      username: username || "Halo Walker",
-      content: replyText,
-      time: "Just now",
-      hop: 0
-    };
-    setComments([...comments, newComment]);
-    setReplyText("");
-  };
-
-  if (isLoading) return <div className={`min-h-screen ${theme.bg}`} />;
-
-  // Eğer fısıltı bulunamazsa
-  if (!currentWhisper) {
+  if (!whisper) {
     return (
-        <div className={`min-h-screen flex flex-col items-center justify-center font-sans text-[#2D3436] transition-colors duration-1000 ${theme.bg}`}>
-            <div className={`fixed inset-0 z-0 pointer-events-none bg-gradient-to-tr opacity-50 ${theme.gradient}`} />
-            <h1 className="text-2xl font-serif font-bold mb-4 z-10">Whisper Lost</h1>
-            <p className="text-gray-500 mb-8 z-10">Bu fısıltı rüzgara karışıp kaybolmuş...</p>
-            <Link href="/feed" className="z-10 px-6 py-3 bg-[#2D3436] text-white rounded-full shadow-lg hover:scale-105 transition-all">
-                Return to Stream
-            </Link>
+      <div
+        className={`min-h-screen ${theme.bg} flex items-center justify-center`}
+      >
+        <div className="px-6 py-4 rounded-2xl bg-white/80 shadow-md">
+          <p className="text-gray-700 font-medium">
+            Bu fısıltıyı bulamıyoruz. Belki rüzgâr onu çoktan götürmüştür.
+          </p>
         </div>
-    )
+      </div>
+    );
   }
 
+  const handleSubmit = (e: FormEvent) => {
+    e.preventDefault();
+    const text = commentText.trim();
+    if (!text) return;
+
+    const result = filterToxic(text);
+    if (!result.ok) {
+      setShowWarning(true);
+      setTimeout(() => setShowWarning(false), 4000);
+      return; // küfürlü yorum yayınlanmıyor
+    }
+
+    addComment(whisper.id, text);
+    setCommentText("");
+  };
+
+  const handleDeleteComment = (comment: CommentType) => {
+    if (
+      window.confirm(
+        "Bu yorumu rüzgara karıştırmak (silmek) istediğine emin misin?"
+      )
+    ) {
+      deleteComment(whisper.id, comment.id);
+    }
+  };
+
   return (
-    <div className={`min-h-screen font-sans text-[#2D3436] transition-colors duration-1000 ${theme.bg}`}>
-      
-      {/* Arkaplan */}
-      <div className={`fixed inset-0 z-0 pointer-events-none bg-gradient-to-tr opacity-50 transition-all duration-1000 ${theme.gradient}`} />
-
-      <div className="relative z-10 max-w-2xl mx-auto pt-8 pb-20 px-4">
-        
-        {/* NAVİGASYON */}
-        <div className="flex items-center gap-4 mb-8">
-          <Link href="/feed" className="p-3 rounded-full bg-white/50 hover:bg-white transition-all shadow-sm text-gray-600">
-            <ArrowLeft size={24} />
-          </Link>
-          <h2 className="text-xl font-serif font-bold text-gray-800">Whisper</h2>
-        </div>
-
-        {/* --- ANA WHISPER KARTI --- */}
-        <motion.div 
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="bg-white/60 backdrop-blur-xl border border-white/80 rounded-[40px] p-8 shadow-lg mb-8 relative overflow-hidden"
+    <div className={`min-h-screen ${theme.bg} py-12`}>
+      <div className="max-w-3xl mx-auto px-4">
+        {/* Whisper kartı */}
+        <div
+          className={`rounded-3xl ${theme.card} border ${theme.cardBorder} shadow-xl p-6 mb-6`}
         >
-          <div className={`absolute -top-20 -right-20 w-64 h-64 rounded-full blur-[80px] opacity-40 ${currentWhisper.color}`} />
-
-          <div className="flex items-center gap-4 mb-6 relative z-10">
-            <Link href={`/profile/${currentWhisper.username}`}>
-                <div className={`w-16 h-16 rounded-full border-4 border-white shadow-md ${currentWhisper.color}`} />
-            </Link>
+          <div className="flex items-start gap-4">
+            <div
+              className={`w-10 h-10 rounded-full ${theme.halo} border border-white/70`}
+            />
+            <div className="flex-1">
+          <div className="flex items-center justify-between mb-1">
             <div>
-              <Link href={`/profile/${currentWhisper.username}`}>
-                 <h3 className="text-lg font-bold text-gray-900 hover:underline decoration-dotted">@{currentWhisper.username}</h3>
-              </Link>
-              <p className="text-sm text-gray-500">{currentWhisper.time}</p>
+              <div className={`text-sm font-semibold ${theme.accent}`}>
+                @{whisper.username}
+              </div>
+              <div className="text-xs text-gray-400">{whisper.time}</div>
+            </div>
+            <div className="text-xs text-gray-400">
+              {whisper.hop} hope •{" "}
+                  {comments.length}{" "}
+                  {comments.length === 1 ? "comment" : "comments"}
             </div>
           </div>
-
-          <p className="text-2xl font-serif font-light leading-relaxed text-gray-700 mb-6 relative z-10">
-            {currentWhisper.content}
+          <p className={`mt-2 text-sm leading-relaxed ${theme.text}`}>
+            {whisper.content}
           </p>
-
-          <div className="flex justify-between items-center text-gray-500 relative z-10 pt-6 border-t border-gray-200/50">
-            <div className="flex gap-8">
-                <div className="flex flex-col items-center gap-1">
-                    <span className="font-bold text-lg text-gray-800">{currentWhisper.hop}</span>
-                    <span className="text-[10px] uppercase tracking-widest">Hopes</span>
-                </div>
-            </div>
-
-            <div className="flex gap-4">
-               <button 
-                 onClick={() => toggleLike(currentWhisper.id)}
-                 className={`p-3 rounded-full bg-white border border-gray-100 shadow-sm hover:scale-110 transition-all ${currentWhisper.isLiked ? theme.accent : 'hover:text-yellow-500'}`}
-               >
-                 <Star size={24} fill={currentWhisper.isLiked ? "currentColor" : "none"} />
-               </button>
-               <button className="p-3 rounded-full bg-white border border-gray-100 shadow-sm hover:scale-110 transition-all hover:text-blue-500">
-                 <Share2 size={24} />
-               </button>
             </div>
           </div>
-        </motion.div>
-
-        {/* --- YORUM YAZMA ALANI --- */}
-        <div className="flex gap-4 mb-10 items-start bg-white/40 p-4 rounded-3xl border border-white/50">
-           <div className={`w-10 h-10 rounded-full flex-shrink-0 ${theme.halo}`} />
-           <div className="w-full">
-             <textarea 
-               value={replyText}
-               onChange={(e) => setReplyText(e.target.value)}
-               placeholder="Bu fısıltıya nazik bir cevap bırak..."
-               className="w-full bg-transparent outline-none text-gray-700 placeholder-gray-400 min-h-[60px] resize-none mt-2"
-             />
-             <div className="flex justify-end">
-               <button 
-                 onClick={handleSendReply}
-                 disabled={!replyText.trim()}
-                 className={`p-2 rounded-full text-white shadow-md transition-all disabled:opacity-50 ${theme.button}`}
-               >
-                 <Send size={20} />
-               </button>
-             </div>
-           </div>
         </div>
 
-        {/* --- YORUMLAR --- */}
-        <div className="space-y-4">
-          <h4 className="text-sm font-bold text-gray-400 tracking-widest uppercase mb-4 ml-2">Whispers back</h4>
-          
-          {comments.map((comment) => (
-            <motion.div 
-              key={comment.id}
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="bg-white/30 border border-white/60 rounded-[24px] p-5 flex gap-4"
-            >
-              <div className="flex flex-col items-center gap-2">
-                 <div className="w-10 h-10 rounded-full bg-gray-200 border-2 border-white" />
-              </div>
-              
-              <div className="w-full">
-                <div className="flex justify-between items-start mb-2">
-                  <div>
-                    <span className="font-bold text-gray-800 text-sm">@{comment.username}</span>
-                    <span className="text-xs text-gray-400 ml-2">{comment.time}</span>
-                  </div>
-                  <div className="flex items-center gap-1 text-xs text-gray-400">
-                    <Star size={12} /> {comment.hop}
-                  </div>
-                </div>
-                <p className="text-gray-600 text-sm leading-relaxed">{comment.content}</p>
-              </div>
-            </motion.div>
-          ))}
+        {/* Uyarı kartı */}
+        {showWarning && (
+          <div className="mb-4 rounded-2xl bg-[#FFF5E5] border border-[#F2C98C] px-4 py-3 text-sm text-[#6B4B20]">
+            Enerjimiz biraz düştü mü?
+            <br />
+            Halo Whispers sadece iyilik ve umut içindir. Kelimelerini biraz
+            yumuşatmak ister misin?
+          </div>
+        )}
+
+        {/* Yorum formu */}
+        <div
+          className={`rounded-3xl ${theme.card} border ${theme.cardBorder} shadow-md p-5 mb-6`}
+        >
+          <h2 className="text-sm font-semibold text-gray-700 mb-3">
+            Fısıltıya bir not bırak
+          </h2>
+          <form onSubmit={handleSubmit} className="space-y-3">
+            <textarea
+              value={commentText}
+              onChange={(e) => setCommentText(e.target.value)}
+              rows={3}
+              className="w-full resize-none rounded-2xl border border-gray-200 bg-white/70 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#E27A24]/40 focus:border-[#E27A24]/60"
+              placeholder={
+                username
+                  ? `Ne söylemek istersin, ${username}?`
+                  : "Ne söylemek istersin?"
+              }
+              maxLength={280}
+            />
+            <div className="flex items-center justify-between text-xs text-gray-400">
+              <span>{commentText.length}/280</span>
+              <button
+                type="submit"
+                className="rounded-full bg-[#222222] px-4 py-1.5 text-xs font-semibold tracking-wide text-white hover:bg-black transition"
+              >
+                Notu gönder
+              </button>
+            </div>
+          </form>
         </div>
 
+        {/* Yorum listesi */}
+        <div
+          className={`rounded-3xl ${theme.cardSoft} border ${theme.cardBorder} backdrop-blur-xl p-5`}
+        >
+          <h3 className="text-sm font-semibold text-gray-700 mb-4">
+            Fısıltıya düşen notlar
+          </h3>
+          {comments.length === 0 ? (
+            <p className="text-xs text-gray-400">
+              Henüz bir not yok. Belki ilk fısıltı senden gelir.
+            </p>
+          ) : (
+            <ul className="space-y-3">
+              {comments.map((c) => (
+                <li
+                  key={c.id}
+                  className="flex items-start justify-between gap-3 rounded-2xl bg-white/60 px-3 py-2"
+                >
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs font-semibold text-gray-700">
+                        @{c.username}
+                      </span>
+                      <span className="text-[10px] text-gray-400">
+                        {c.time}
+                      </span>
+                    </div>
+                    <p className="mt-1 text-xs text-gray-700 leading-relaxed">
+                      {c.content}
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => handleDeleteComment(c)}
+                    className="ml-2 shrink-0 text-[10px] text-gray-400 hover:text-red-500"
+                  >
+                    Sil
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
       </div>
     </div>
   );

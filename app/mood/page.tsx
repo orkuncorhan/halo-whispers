@@ -1,159 +1,254 @@
 // DOSYA: app/mood/page.tsx
 "use client";
 
-import React, { useState, useEffect } from "react";
-import { motion } from "framer-motion";
+import React, { ChangeEvent } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-// Import yolu düzeltildi
 import { useTheme } from "../context/ThemeContext";
+import { HaloOrb } from "../components/HaloOrb";
+import HaloBrandMark from "../components/HaloBrandMark";
 
-export default function HaloWhispersMood() {
-  const { mood, setMood, username, isMoodSetToday, confirmMoodForToday } = useTheme(); 
-  const [mounted, setMounted] = useState(false);
+export default function MoodPage() {
   const router = useRouter();
+  const { mood, setMood, confirmMoodForToday } = useTheme();
 
-  useEffect(() => {
-    setMounted(true);
-    // KRİTİK KONTROL:
-    // Eğer kullanıcı adı varsa VE bugün zaten mood seçilmişse
-    // Bu sayfada vakit kaybetme, direkt akışa git.
-    if (username && isMoodSetToday) {
-       router.push("/feed");
-    }
-  }, [username, isMoodSetToday, router]);
+  const moodLabel = mood < 40 ? "Heavy" : mood > 60 ? "Light" : "Neutral";
 
-  const handleEnter = () => {
-    // 1. Butona basınca bugünün mood'unu kaydet
+  // 0–1 arası intensity
+  const intensity = mood / 100;
+  const ringOpacity = 0.35 + intensity * 0.65; // 0.35–1.0
+  const raysOpacity = 0.2 + intensity * 0.8; // 0.2–1.0
+  const coreBrightness = 0.85 + intensity * 0.6; // 0.85–1.45
+
+  const handleChange = (e: ChangeEvent<HTMLInputElement>) => {
+    setMood(parseInt(e.target.value, 10));
+  };
+
+  const handleConfirm = () => {
     confirmMoodForToday();
-
-    // 2. Yönlendir
-    if (username) {
-      router.push("/feed");
-    } else {
-      router.push("/login");
-    }
+    router.push("/feed");
   };
-
-  // RENK MANTIĞI
-  const getColors = (val: number) => {
-    if (val < 30) return {
-      bg: "bg-[#F0F4F8]",
-      core: "bg-blue-200",
-      glow: "from-blue-300/60 via-indigo-200/40 to-transparent",
-      ray: "from-blue-400/30 via-transparent to-transparent",
-      text: "text-slate-600",
-      status: "Heavy"
-    };
-    if (val > 70) return {
-      bg: "bg-[#FFF0F5]",
-      core: "bg-rose-200",
-      glow: "from-rose-300/60 via-pink-200/40 to-transparent",
-      ray: "from-rose-400/30 via-transparent to-transparent",
-      text: "text-rose-500",
-      status: "Radiant"
-    };
-    return {
-      bg: "bg-[#FFF9F0]",
-      core: "bg-amber-100",
-      glow: "from-amber-200/60 via-orange-100/40 to-transparent",
-      ray: "from-amber-300/30 via-transparent to-transparent",
-      text: "text-amber-600",
-      status: "Calm"
-    };
-  };
-
-  const theme = getColors(mood);
-
-  if (!mounted) return <div className="w-full h-screen bg-white" />;
 
   return (
-    <div className={`relative w-full min-h-screen overflow-hidden font-sans flex items-center justify-center transition-colors duration-1000 ${theme.bg} p-4`}>
-      
-      <div className="absolute inset-0 opacity-[0.04] pointer-events-none" style={{ backgroundImage: 'url("https://www.transparenttextures.com/patterns/noise-lines.png")' }}></div>
+    <>
+      {/* Halo + slider thumb için TÜM stiller tek bir global block içinde */}
+      <style jsx global>{`
+        @keyframes rotateRays {
+          0% {
+            transform: rotate(0deg);
+          }
+          100% {
+            transform: rotate(360deg);
+          }
+        }
 
-      <div className="relative z-10 w-full max-w-5xl h-auto md:h-[600px] bg-white/40 backdrop-blur-xl border border-white/80 rounded-[32px] md:rounded-[48px] shadow-[0_20px_60px_-10px_rgba(0,0,0,0.1)] flex flex-col md:flex-row overflow-hidden ring-1 ring-white/50">
-        
-        {/* SOL TARAFI: HALE */}
-        <div className="w-full h-64 md:w-5/12 md:h-full flex items-center justify-center relative border-b md:border-b-0 md:border-r border-white/30 overflow-hidden bg-white/10 flex-shrink-0">
-           
-           <motion.div 
-             animate={{ scale: [1, 1.2, 1], opacity: [0.5, 0.8, 0.5] }}
-             transition={{ duration: 5, repeat: Infinity, ease: "easeInOut" }}
-             className={`absolute w-[400px] h-[400px] md:w-[500px] md:h-[500px] rounded-full blur-[60px] md:blur-[80px] bg-gradient-radial transition-colors duration-1000 ${theme.glow}`}
-           />
-           <motion.div
-             animate={{ rotate: 360 }}
-             transition={{ duration: 30, repeat: Infinity, ease: "linear" }}
-             className="absolute w-[300px] h-[300px] md:w-[400px] md:h-[400px] opacity-70"
-           >
-              <div className={`w-full h-full bg-gradient-conic blur-[40px] transition-colors duration-1000 ${theme.ray}`} 
-                   style={{ background: `conic-gradient(from 0deg, transparent 0deg, currentColor 20deg, transparent 120deg, currentColor 160deg, transparent 360deg)` }} />
-           </motion.div>
-           <motion.div
-             animate={{ scale: [1, 1.05, 1] }}
-             transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
-             className={`relative w-[150px] h-[150px] md:w-[220px] md:h-[220px] rounded-full blur-[20px] md:blur-[30px] shadow-[0_0_60px_rgba(255,255,255,0.6)] transition-colors duration-1000 ${theme.core}`}
-           />
-           <div className="absolute w-[80px] h-[80px] md:w-[120px] md:h-[120px] bg-white rounded-full blur-[15px] md:blur-[20px] mix-blend-overlay opacity-90"></div>
-        </div>
+        .halo-rays {
+          position: absolute;
+          width: 200%;
+          height: 200%;
+          top: -50%;
+          left: -50%;
+          background: conic-gradient(
+            from 0deg,
+            transparent 0%,
+            rgba(255, 238, 200, 0.25) 10%,
+            transparent 22%,
+            rgba(255, 243, 210, 0.28) 34%,
+            transparent 48%,
+            rgba(255, 238, 200, 0.25) 60%,
+            transparent 78%,
+            rgba(255, 243, 210, 0.28) 90%,
+            transparent 100%
+          );
+          filter: blur(34px);
+          /* Sadece yavaş dönüş – nefes yok */
+          animation: rotateRays 22s linear infinite;
+          pointer-events: none;
+        }
 
-        {/* SAĞ TARAFI: İÇERİK */}
-        <div className="w-full md:w-7/12 h-full flex flex-col justify-center px-8 py-10 md:px-20 md:py-0 space-y-8 md:space-y-12">
-          
-          <div className="space-y-3 md:space-y-4 text-center md:text-left">
-            <h4 className="text-[10px] font-extrabold tracking-[0.3em] text-gray-400 uppercase">Welcome Space</h4>
-            <h1 className="text-4xl md:text-6xl font-serif text-gray-800 tracking-tight">Halo Whispers</h1>
-            <p className="text-gray-500 text-sm font-light leading-relaxed">
-              İçindeki sesi, iyilikle yankılanan bir frekansa ayarla.
-            </p>
+        .halo-core-glow {
+          position: absolute;
+          width: 82%;
+          height: 82%;
+          border-radius: 9999px;
+          background: radial-gradient(
+            circle at 50% 50%,
+            rgba(255, 255, 255, 1) 0%,
+            rgba(255, 248, 231, 0.95) 35%,
+            rgba(255, 248, 231, 0.45) 65%,
+            rgba(255, 248, 231, 0) 90%
+          );
+          filter: blur(14px);
+          pointer-events: none;
+        }
+
+        .halo-ring {
+          position: relative;
+          border-radius: 9999px;
+          border: 3px solid rgba(255, 245, 220, 0.9);
+          background: rgba(255, 255, 255, 0.22);
+          box-shadow:
+            0 0 65px 15px rgba(255, 230, 170, 0.55),
+            inset 0 0 38px 4px rgba(255, 255, 255, 1);
+          backdrop-filter: blur(6px);
+          /* Pulse animasyonu kaldırıldı – parlaklığı sadece inline style belirleyecek */
+        }
+
+        /* RANGE SLIDER – Apple vari görünüm */
+        input[type="range"] {
+          -webkit-appearance: none;
+          appearance: none;
+          width: 100%;
+          height: 4px;
+          border-radius: 9999px;
+          background: rgba(148, 163, 184, 0.22);
+          box-shadow: inset 0 0 0 1px rgba(15, 23, 42, 0.04);
+        }
+
+        input[type="range"]::-webkit-slider-runnable-track {
+          height: 4px;
+          border-radius: 9999px;
+          background: transparent;
+        }
+
+        /* Slider thumb – WEBKIT (Chrome, Safari) */
+        input[type="range"]::-webkit-slider-thumb {
+          -webkit-appearance: none;
+          appearance: none;
+          width: 18px;
+          height: 18px;
+          border-radius: 9999px;
+          background: #0f172a;
+          box-shadow:
+            0 6px 12px rgba(15, 23, 42, 0.25),
+            0 0 0 4px rgba(15, 23, 42, 0.08);
+          cursor: pointer;
+          margin-top: -7px; /* 18px–4px / 2 = 7 → tam ortalama */
+        }
+
+        /* Slider thumb – FIREFOX */
+        input[type="range"]::-moz-range-thumb {
+          width: 18px;
+          height: 18px;
+          border-radius: 9999px;
+          background: #0f172a;
+          box-shadow:
+            0 6px 12px rgba(15, 23, 42, 0.25),
+            0 0 0 4px rgba(15, 23, 42, 0.08);
+          cursor: pointer;
+        }
+
+        input[type="range"]::-moz-range-track {
+          height: 4px;
+          border-radius: 9999px;
+          background: rgba(148, 163, 184, 0.22);
+        }
+      `}</style>
+
+      <div
+        className="min-h-[100dvh] w-full flex items-center justify-center px-4 sm:px-6 lg:px-10 py-8 lg:py-12"
+        style={{
+          background:
+            "radial-gradient(circle at top, #FFFFFF 0%, #F3F4FA 45%, #ECEFF7 100%)",
+        }}
+      >
+        <div className="mx-auto flex max-w-5xl flex-col gap-8 rounded-[2.5rem] bg-white/78 p-6 shadow-[0_30px_120px_rgba(15,23,42,0.18)] backdrop-blur-2xl sm:p-8 lg:flex-row lg:items-center lg:gap-10 lg:p-10">
+          <div className="flex items-center gap-3 px-2">
+            <HaloBrandMark size={30} />
+            <span className="text-lg font-semibold text-slate-900">Halo</span>
           </div>
 
-          <div className="space-y-6">
-            <div className="flex justify-between text-[10px] md:text-[11px] font-bold tracking-widest uppercase text-gray-400">
-              <span>Mood</span>
-              <span className={`transition-colors duration-300 ${theme.text}`}>
-                {theme.status}
-              </span>
-            </div>
-
-            <div className="relative w-full h-8 md:h-10 flex items-center group">
-              <div className="absolute w-full h-1.5 bg-gray-200 rounded-full overflow-hidden">
-                 <div 
-                   className="h-full bg-gray-800 transition-all duration-100 ease-out" 
-                   style={{ width: `${mood}%` }}
-                 />
-              </div>
-              <input 
-                type="range" min="0" max="100" value={mood} 
-                onChange={(e) => setMood(parseInt(e.target.value))}
-                className="absolute w-full h-full opacity-0 cursor-pointer z-30"
+          {/* Sol: Halo */}
+          <div className="flex w-full justify-center lg:w-1/2">
+            <div className="relative flex h-56 w-56 items-center justify-center sm:h-64 sm:w-64 md:h-72 md:w-72">
+              <div
+                className="halo-rays"
+                style={{ opacity: raysOpacity }}
               />
-              <div 
-                className="absolute h-5 w-5 md:h-6 md:w-6 bg-white border border-gray-100 shadow-md rounded-full pointer-events-none z-20 transition-all duration-100 ease-out flex items-center justify-center"
-                style={{ left: `${mood}%`, transform: 'translateX(-50%)' }}
-              >
-                <div className="w-1.5 h-1.5 md:w-2 md:h-2 bg-gray-800 rounded-full opacity-30"></div>
-              </div>
-            </div>
-
-            <div className="flex justify-between text-[9px] md:text-[10px] text-gray-400 font-medium">
-              <span>Heavy</span>
-              <span>Neutral</span>
-              <span>Light</span>
+              <div
+                className="halo-core-glow"
+                style={{
+                  filter: `blur(14px) brightness(${coreBrightness})`,
+                }}
+              />
+              <div
+                className="halo-ring h-full w-full"
+                style={{ opacity: ringOpacity }}
+              />
             </div>
           </div>
 
-          {/* BUTON - AKILLI GEÇİŞ */}
-          <button 
-            onClick={handleEnter}
-            className="w-full py-4 md:py-5 bg-[#2D3436] text-white rounded-2xl text-xs md:text-sm font-medium tracking-wider shadow-xl hover:bg-black hover:scale-[1.02] transition-all duration-300"
-          >
-            Enter the Stream
-          </button>
+          {/* Sağ: Metin + slider */}
+          <div className="w-full lg:w-1/2">
+            <p className="text-[0.8rem] font-medium text-slate-500">
+              Welcome space
+            </p>
 
+            <h1 className="mt-2 text-3xl font-semibold tracking-tight text-slate-900 sm:text-4xl">
+              Halo Whispers
+            </h1>
+
+            <p className="mt-3 text-sm leading-relaxed text-slate-600 sm:text-base">
+              İçindeki sesi, iyilikle yankılanan bir frekansa ayarla. Halo,
+              hislerini yargılamadan dinler; sen sadece kendini olduğun gibi
+              fısılda.
+            </p>
+
+            {/* Mood alanı */}
+            <div className="mt-7">
+              <div className="flex items-center justify-between text-[0.8rem] text-slate-500">
+                <span>Ruh hâli</span>
+                <span
+                  className={
+                    moodLabel === "Neutral"
+                      ? "text-amber-500 font-medium"
+                      : moodLabel === "Light"
+                      ? "text-emerald-500 font-medium"
+                      : "text-sky-500 font-medium"
+                  }
+                >
+                  {moodLabel}
+                </span>
+              </div>
+
+              {/* Slider */}
+              <div className="mt-3">
+                <input
+                  type="range"
+                  min={0}
+                  max={100}
+                  value={mood}
+                  onChange={handleChange}
+                />
+
+                {/* Alt etiketler */}
+                <div className="mt-2 flex justify-between text-[0.75rem] text-slate-400">
+                  <span>Heavy</span>
+                  <span>Neutral</span>
+                  <span>Light</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Butonlar */}
+            <div className="mt-7 flex flex-col gap-3 sm:flex-row sm:items-center">
+              <button
+                onClick={handleConfirm}
+                className="inline-flex flex-1 items-center justify-center rounded-full bg-slate-900/90 px-6 py-2.5 text-sm font-medium text-slate-50 shadow-[0_20px_50px_rgba(15,23,42,0.40)] hover:bg-slate-900"
+              >
+                Enter the Stream
+              </button>
+
+              <Link
+                href="/"
+                className="text-xs text-slate-500 underline-offset-4 hover:text-slate-700 hover:underline sm:text-[0.8rem]"
+              >
+                Geri dön
+              </Link>
+            </div>
+          </div>
         </div>
       </div>
-    </div>
+    </>
   );
 }
