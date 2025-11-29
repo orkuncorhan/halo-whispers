@@ -5,6 +5,7 @@ import React from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useLanguage } from "../context/LanguageContext";
+import GlowHaloLogo from "@/app/components/GlowHaloLogo";
 
 type NavItem = {
   id: "home" | "notifications" | "profile" | "settings";
@@ -75,6 +76,13 @@ export function HaloSideNav() {
 
   return (
     <aside className="hidden w-44 flex-col gap-3 pt-8 pr-4 lg:flex">
+      <div className="flex items-center gap-2 pl-1 text-slate-800 dark:text-slate-100">
+        <GlowHaloLogo size={28} />
+        <span className="text-sm font-semibold tracking-tight">
+          Halo
+        </span>
+      </div>
+
       {navItems.map((item) => {
         const isActive = pathname.startsWith(item.href);
         return (

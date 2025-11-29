@@ -7,6 +7,7 @@ import { useRouter } from "next/navigation";
 import { useUser } from "./context/UserContext";
 import { useLanguage } from "./context/LanguageContext";
 import { useColorMode } from "./context/ColorModeContext";
+import HaloBrandMark from "./components/HaloBrandMark";
 
 export default function HomePage() {
   const router = useRouter();
@@ -201,10 +202,7 @@ export default function HomePage() {
         <div className="relative z-10 flex min-h-[100dvh] flex-col">
           {/* NAV */}
           <nav className="nav-intro pointer-events-auto flex items-center justify-between px-6 pt-5 text-xs text-slate-600 sm:text-sm">
-            <div className="flex items-center gap-2 font-medium text-slate-800">
-              <span className="h-7 w-7 rounded-full bg-amber-100/80 shadow-inner shadow-amber-200/70" />
-              <span>Halo Whispers</span>
-            </div>
+            <HaloBrandMark />
 
             <div className="flex items-center gap-4">
               <Link
@@ -235,11 +233,25 @@ export default function HomePage() {
 
             {/* Metin + CTA */}
             <div className="max-w-xl text-center">
-              <h1 className="headline-intro text-3xl font-semibold tracking-tight text-slate-900 dark:text-slate-50 sm:text-4xl lg:text-[2.6rem]">
+              <h1
+                className={
+                  "headline-intro mt-10 text-3xl font-semibold tracking-tight text-center md:text-4xl lg:text-5xl " +
+                  (isDark
+                    ? "text-white"
+                    : "text-slate-900 drop-shadow-[0_0_18px_rgba(255,255,255,0.85)]")
+                }
+              >
                 {title}
               </h1>
 
-              <p className="subtext-intro mt-4 text-sm leading-relaxed text-slate-600 dark:text-slate-300 sm:text-base">
+              <p
+                className={
+                  "subtext-intro mt-4 max-w-xl mx-auto text-center text-sm leading-relaxed md:text-base " +
+                  (isDark
+                    ? "text-slate-300"
+                    : "text-slate-600 drop-shadow-[0_0_10px_rgba(255,255,255,0.8)]")
+                }
+              >
                 {isTR ? (
                   <>
                     Fısıldadığın her söz, halo’nun kalbinde{" "}
@@ -259,18 +271,39 @@ export default function HomePage() {
                 )}
               </p>
 
-              <div className="mt-10 flex flex-wrap items-center justify-center gap-4">
+              <div className="mt-10 flex items-center justify-center gap-6">
+                {/* Primary – Başlayalım */}
                 <button
                   onClick={() => router.push("/login")}
-                  className="rounded-full bg-slate-900 px-6 py-3 text-sm font-medium text-slate-50 shadow-[0_18px_40px_rgba(15,23,42,0.35)] transition hover:bg-slate-950"
+                  className={`
+      rounded-full px-10 py-3
+      bg-slate-900 text-slate-50
+      shadow-[0_18px_60px_rgba(15,23,42,0.55)]
+      hover:bg-slate-800
+      transition duration-200
+      focus-visible:outline-none
+      focus-visible:ring-2 focus-visible:ring-offset-2
+      focus-visible:ring-slate-300 dark:focus-visible:ring-slate-500
+      ${isDark ? "border border-slate-700/70" : ""}
+    `}
                 >
                   {isTR ? "Başlayalım" : "Get started"}
                 </button>
 
+                {/* Secondary – Halo nasıl çalışıyor? */}
                 <button
                   type="button"
                   onClick={() => setShowHowHaloWorks(true)}
-                  className="text-sm font-medium text-slate-500 underline-offset-4 transition hover:text-slate-900 hover:underline"
+                  className={`
+      text-sm md:text-base font-medium
+      border-b border-transparent
+      transition duration-200
+      ${
+        isDark
+          ? "text-slate-300 hover:text-slate-50 hover:border-slate-400/80"
+          : "text-slate-500 hover:text-slate-700 hover:border-slate-400/60"
+      }
+    `}
                 >
                   {isTR ? "Halo nasıl çalışıyor?" : "How does Halo work?"}
                 </button>

@@ -159,7 +159,7 @@ export default function MoodPage() {
       >
         <div className="mx-auto flex max-w-5xl flex-col gap-8 rounded-[2.5rem] bg-white/78 p-6 shadow-[0_30px_120px_rgba(15,23,42,0.18)] backdrop-blur-2xl sm:p-8 lg:flex-row lg:items-center lg:gap-10 lg:p-10">
           <div className="flex items-center gap-3 px-2">
-            <HaloBrandMark size={30} />
+            <HaloBrandMark />
             <span className="text-lg font-semibold text-slate-900">Halo</span>
           </div>
 
