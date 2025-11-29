@@ -1,157 +1,178 @@
-// DOSYA: app/settings/page.tsx
 "use client";
 
-import React, { useState } from "react";
-import { motion } from "framer-motion";
-// DÜZELTME BURADA YAPILDI: (Relative Path)
-import { useTheme } from "../context/ThemeContext";
-import Link from "next/link";
-import { ArrowLeft, Bell, Moon, Shield, LogOut, Volume2, Eye } from "lucide-react";
-import { useRouter } from "next/navigation"; 
+import { useState, FormEvent } from "react";
+import { useRouter } from "next/navigation";
+import { useUser } from "../context/UserContext";
+import { useColorMode } from "../context/ColorModeContext";
+import { useLanguage } from "../context/LanguageContext";
+import { GlassCard } from "../components/GlassCard";
 
 export default function SettingsPage() {
-  const { getThemeColors, setMood, mood, logout } = useTheme();
-  const theme = getThemeColors();
   const router = useRouter();
+  const { username, setUsername } = useUser();
+  const { colorMode, toggleColorMode } = useColorMode();
+  const { language, setLanguage } = useLanguage();
 
-  // Ayarlar State'leri
-  const [notifications, setNotifications] = useState(true);
-  const [sound, setSound] = useState(true);
-  const [privateProfile, setPrivateProfile] = useState(false);
+  const isTR = language === "tr";
+  const isDark = colorMode === "dark";
+  const [nameInput, setNameInput] = useState(username ?? "");
+
+  const handleSubmit = (e: FormEvent) => {
+    e.preventDefault();
+    const trimmed = nameInput.trim();
+    if (trimmed) {
+      setUsername(trimmed);
+    }
+  };
 
   return (
-    <div className={`min-h-screen font-sans text-[#2D3436] transition-colors duration-1000 ${theme.bg}`}>
-      
-      {/* Arkaplan */}
-      <div className={`fixed inset-0 z-0 pointer-events-none bg-gradient-to-br opacity-50 transition-all duration-1000 ${theme.gradient}`} />
+    <main
+      className={
+        "min-h-screen flex items-center justify-center px-4 py-16 transition-colors " +
+        (isDark
+          ? "bg-[#020617]"
+          : "bg-[radial-gradient(circle_at_top,_#fdfbff,_#e3f2ff)]")
+      }
+    >
+      <div className="max-w-xl w-full">
+        <button
+          type="button"
+          onClick={() => router.back()}
+          className="mb-4 text-xs text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 transition-colors"
+        >
+          {isTR ? "<- Geri don" : "<- Go back"}
+        </button>
 
-      <div className="relative z-10 max-w-xl mx-auto pt-10 pb-20 px-6">
-        
-        {/* HEADER */}
-        <div className="flex items-center gap-4 mb-8">
-          <Link href="/profile" className="p-3 rounded-full bg-white/50 hover:bg-white transition-all shadow-sm text-gray-600">
-            <ArrowLeft size={24} />
-          </Link>
-          <h1 className="text-2xl font-serif font-bold text-gray-800">Settings</h1>
-        </div>
+        <GlassCard className="w-full p-8 md:p-10">
+          <h1 className="text-2xl font-semibold text-slate-900 dark:text-slate-50 mb-6">
+            {isTR ? "Ayarlar" : "Settings"}
+          </h1>
 
-        <div className="space-y-6">
-          
-          {/* --- BÖLÜM 1: GÖRÜNÜM & HALE --- */}
-          <Section title="Appearance & Aura">
-            <div className="flex items-center justify-between p-4 border-b border-gray-100">
-               <div className="flex items-center gap-3">
-                 <div className={`w-10 h-10 rounded-full flex items-center justify-center ${theme.halo}`}>
-                    <Moon size={20} className={theme.accent} />
-                 </div>
-                 <div>
-                   <p className="font-bold text-gray-700">Default Mood</p>
-                   <p className="text-xs text-gray-400">Başlangıç hale rengin</p>
-                 </div>
-               </div>
-               {/* Mini Mood Slider */}
-               <div className="w-32">
-                 <input 
-                    type="range" min="0" max="100" value={mood} 
-                    onChange={(e) => setMood(parseInt(e.target.value))}
-                    className="w-full h-1.5 bg-gray-200 rounded-full appearance-none cursor-pointer accent-gray-600"
-                 />
-               </div>
+          <section className="mb-8">
+            <p className="text-sm font-medium text-slate-800 dark:text-slate-100">
+              {isTR ? "Tema" : "Theme"}
+            </p>
+            <p className="text-xs text-slate-500 dark:text-slate-400 mb-3">
+              {isTR ? "Su an: " : "Current: "}
+              {colorMode === "light"
+                ? isTR
+                  ? "Acik"
+                  : "Light"
+                : isTR
+                ? "Koyu"
+                : "Dark"}
+            </p>
+            <button
+              type="button"
+              onClick={toggleColorMode}
+              className="px-4 py-2 rounded-xl bg-neutral-900 text-white text-xs hover:bg-neutral-800 dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-slate-200 transition-colors"
+            >
+              {colorMode === "light"
+                ? isTR
+                  ? "Koyu moda gec"
+                  : "Switch to dark"
+                : isTR
+                ? "Acik moda gec"
+                : "Switch to light"}
+            </button>
+          </section>
+
+          <section className="mb-8">
+            <p className="text-sm font-medium text-slate-800 dark:text-slate-100 mb-2">
+              {isTR ? "Dil" : "Language"}
+            </p>
+
+            <div className="inline-flex rounded-full bg-slate-100 dark:bg-slate-800 p-1 mb-2">
+              <button
+                type="button"
+                onClick={() => setLanguage("tr")}
+                className={`px-4 py-1.5 text-xs rounded-full transition-colors ${
+                  isTR
+                    ? "bg-neutral-900 text-white dark:bg-slate-100 dark:text-slate-900"
+                    : "text-slate-500 dark:text-slate-300 hover:text-slate-900 dark:hover:text-slate-100"
+                }`}
+              >
+                Turkce
+              </button>
+              <button
+                type="button"
+                onClick={() => setLanguage("en")}
+                className={`px-4 py-1.5 text-xs rounded-full transition-colors ${
+                  !isTR
+                    ? "bg-neutral-900 text-white dark:bg-slate-100 dark:text-slate-900"
+                    : "text-slate-500 dark:text-slate-300 hover:text-slate-900 dark:hover:text-slate-100"
+                }`}
+              >
+                English
+              </button>
             </div>
-          </Section>
 
-          {/* --- BÖLÜM 2: BİLDİRİMLER --- */}
-          <Section title="Notifications">
-            <ToggleItem 
-              icon={<Bell size={20} />} 
-              title="Push Notifications" 
-              desc="Hope ve fısıltı bildirimlerini al"
-              active={notifications}
-              onToggle={() => setNotifications(!notifications)}
-              color={theme.halo}
-              accent={theme.accent}
-            />
-            <ToggleItem 
-              icon={<Volume2 size={20} />} 
-              title="Sound Effects" 
-              desc="Rahatlatıcı ses efektleri"
-              active={sound}
-              onToggle={() => setSound(!sound)}
-              color={theme.halo}
-              accent={theme.accent}
-            />
-          </Section>
+            <p className="text-[11px] text-slate-500 dark:text-slate-400">
+              {isTR
+                ? "Dil tercihin burada saklanir; arayuz metinlerini buna gore gosteririz."
+                : "Your language preference is stored here; we will show the interface in that language."}
+            </p>
+          </section>
 
-          {/* --- BÖLÜM 3: GİZLİLİK --- */}
-          <Section title="Privacy">
-            <ToggleItem 
-              icon={<Eye size={20} />} 
-              title="Private Profile" 
-              desc="Sadece takipçilerin fısıltılarını görebilir"
-              active={privateProfile}
-              onToggle={() => setPrivateProfile(!privateProfile)}
-              color={theme.halo}
-              accent={theme.accent}
-            />
-            <div className="p-4 flex items-center gap-3 cursor-pointer hover:bg-white/40 transition-colors rounded-b-3xl">
-               <div className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center text-gray-500">
-                 <Shield size={20} />
-               </div>
-               <span className="font-bold text-gray-600 text-sm">Privacy Policy & Terms</span>
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div>
+              <label
+                className="block text-sm font-medium text-slate-800 dark:text-slate-100 mb-1"
+                htmlFor="username"
+              >
+                {isTR ? "Kullanici adin" : "Your username"}
+              </label>
+              <input
+                id="username"
+                type="text"
+                value={nameInput}
+                onChange={(e) => setNameInput(e.target.value)}
+                className="
+                  w-full
+                  rounded-2xl
+                  border
+                  border-slate-200
+                  bg-white
+                  px-4
+                  py-2.5
+                  text-sm
+                  text-slate-900
+                  shadow-inner
+                  focus:outline-none
+                  focus:ring-2
+                  focus:ring-sky-300
+                  dark:border-slate-700
+                  dark:bg-slate-900
+                  dark:text-slate-50
+                  dark:shadow-[inset_0_0_0_1px_rgba(15,23,42,0.6)]
+                "
+                placeholder={isTR ? "ornegin: orkun" : "e.g. luna-walker"}
+              />
             </div>
-          </Section>
 
-          {/* --- ÇIKIŞ BUTONU --- */}
-          <button 
-            onClick={() => { logout(); router.push("/login"); }}
-            className="w-full py-4 mt-8 bg-white border border-red-100 text-red-500 font-bold rounded-2xl shadow-sm hover:bg-red-50 hover:shadow-md transition-all flex items-center justify-center gap-2"
-          >
-            <LogOut size={20} />
-            Log Out
-          </button>
-
-          <p className="text-center text-[10px] text-gray-400 mt-4">Halo Whispers v1.0 (MVP) • Made with Light</p>
-
-        </div>
+            <button
+              type="submit"
+              className="
+                w-full
+                mt-2
+                rounded-2xl
+                bg-neutral-900
+                text-white
+                text-sm
+                py-2.5
+                font-medium
+                hover:bg-neutral-800
+                dark:bg-slate-100
+                dark:text-slate-900
+                dark:hover:bg-slate-200
+                transition-colors
+              "
+            >
+              {isTR ? "Kaydet" : "Save"}
+            </button>
+          </form>
+        </GlassCard>
       </div>
-    </div>
+    </main>
   );
-}
-
-// --- YARDIMCI BİLEŞENLER ---
-
-function Section({ title, children }: { title: string, children: React.ReactNode }) {
-  return (
-    <div>
-      <h3 className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-3 ml-2">{title}</h3>
-      <div className="bg-white/40 backdrop-blur-xl border border-white/60 rounded-[32px] shadow-sm overflow-hidden">
-        {children}
-      </div>
-    </div>
-  )
-}
-
-function ToggleItem({ icon, title, desc, active, onToggle, color, accent }: any) {
-  return (
-    <div className="flex items-center justify-between p-4 border-b border-gray-100/50 last:border-none cursor-pointer hover:bg-white/30 transition-colors" onClick={onToggle}>
-       <div className="flex items-center gap-3">
-         <div className={`w-10 h-10 rounded-full flex items-center justify-center transition-colors duration-500 ${color}`}>
-            <div className={accent}>{icon}</div>
-         </div>
-         <div>
-           <p className="font-bold text-gray-700 text-sm">{title}</p>
-           <p className="text-xs text-gray-400">{desc}</p>
-         </div>
-       </div>
-       
-       {/* Toggle Switch */}
-       <div className={`w-12 h-7 rounded-full p-1 transition-colors duration-300 flex items-center ${active ? 'bg-green-400' : 'bg-gray-200'}`}>
-          <motion.div 
-            layout
-            className="w-5 h-5 bg-white rounded-full shadow-sm"
-            animate={{ x: active ? 20 : 0 }}
-          />
-       </div>
-    </div>
-  )
 }

@@ -1,21 +1,31 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --halo-page-bg: radial-gradient(circle at top, #fdfbff, #e3f2ff);
+  --halo-shell-bg: #f6f7ff;
+  --halo-text-main: #020617;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+html.dark {
+  --halo-page-bg: radial-gradient(circle at top, #020617, #0b1020);
+  --halo-shell-bg: #020617;
+  --halo-text-main: #e5e7eb;
+}
+
+html {
+  transition: background 0.3s ease, color 0.3s ease;
+}
+
+html.dark body {
+  background: #020617;
+  color: #e5e7eb;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
+  background: #f6f7ff;
+  color: #020617;
   font-family: Arial, Helvetica, sans-serif;
+  transition: background-color 200ms ease, color 200ms ease;
 }
 
 @keyframes haloGlobalPulse {
@@ -50,4 +60,26 @@ body {
 
 .animate-pulse-slow {
   animation: pulse-slow 4s ease-in-out infinite;
+}
+
+/* Halo Whispers - global light/dark override  */
+
+html {
+  background-color: #f6f7ff;
+  color: #020617;
+}
+
+body {
+  background-color: transparent;
+  color: inherit;
+}
+
+/* Dark mode aktifken (html.dark) tüm sayfa koyulaşsın */
+html.dark {
+  background-color: #020617;
+  color: #e5e7eb;
+}
+
+html.dark body {
+  background-color: transparent;
 }

@@ -5,6 +5,8 @@ import { useRouter } from "next/navigation";
 import { SparkIcon, EchoIcon, BeamIcon } from "../components/Icons";
 import EmptyNotifications from "../components/EmptyNotifications";
 import HaloBrandMark from "../components/HaloBrandMark";
+import { useLanguage } from "../context/LanguageContext";
+import { useColorMode } from "../context/ColorModeContext";
 
 type NotificationType = "hope" | "echo" | "beam";
 
@@ -53,26 +55,69 @@ function NotificationItem({ type, user, text, time }: NotificationItemProps) {
 
 export default function NotificationsPage() {
   const router = useRouter();
-  const notifications: NotificationItemProps[] = [
-    { id: 1, type: "hope", user: "Elena", text: "sent you hope.", time: "2m" },
-    {
-      id: 2,
-      type: "echo",
-      user: "Marcel",
-      text: "echoed your whisper.",
-      time: "15m",
-    },
-    {
-      id: 3,
-      type: "beam",
-      user: "Anna",
-      text: "shared your whisper.",
-      time: "1h",
-    },
-  ];
+  const { colorMode } = useColorMode();
+  const isDark = colorMode === "dark";
+  const { language } = useLanguage();
+  const isTR = language === "tr";
+
+  const notifications: NotificationItemProps[] = isTR
+    ? [
+        {
+          id: 1,
+          type: "hope",
+          user: "Elena",
+          text: "sana bir hope gönderdi.",
+          time: "2 dk",
+        },
+        {
+          id: 2,
+          type: "echo",
+          user: "Marcel",
+          text: "fısıltını yankıladı.",
+          time: "15 dk",
+        },
+        {
+          id: 3,
+          type: "beam",
+          user: "Anna",
+          text: "fısıltını paylaştı.",
+          time: "1 sa",
+        },
+      ]
+    : [
+        {
+          id: 1,
+          type: "hope",
+          user: "Elena",
+          text: "sent you hope.",
+          time: "2m",
+        },
+        {
+          id: 2,
+          type: "echo",
+          user: "Marcel",
+          text: "echoed your whisper.",
+          time: "15m",
+        },
+        {
+          id: 3,
+          type: "beam",
+          user: "Anna",
+          text: "shared your whisper.",
+          time: "1h",
+        },
+      ];
 
   return (
-    <main className="max-w-3xl mx-auto px-4 pb-24 pt-16">
+    <main
+      className={
+        "min-h-screen transition-colors " +
+        (isDark
+          ? "bg-[#020617] text-slate-100"
+          : "bg-[radial-gradient(circle_at_top,_#fdfbff,_#e3f2ff)] text-slate-900")
+      }
+    >
+      <div className="max-w-3xl mx-auto px-4 pb-24 pt-16">
       {/* === HEADER KART === */}
       <header
         className="
@@ -89,7 +134,7 @@ export default function NotificationsPage() {
         <div className="flex items-center gap-3">
           <HaloBrandMark size={26} />
           <h1 className="text-xl font-semibold text-slate-900">
-            Notifications
+            {isTR ? "Bildirimler" : "Notifications"}
           </h1>
         </div>
 
@@ -106,7 +151,7 @@ export default function NotificationsPage() {
             transition
           "
         >
-          Back to Stream
+          {isTR ? "Akışa dön" : "Back to stream"}
         </button>
       </header>
 
@@ -116,6 +161,7 @@ export default function NotificationsPage() {
         ) : (
           notifications.map((n) => <NotificationItem key={n.id} {...n} />)
         )}
+      </div>
       </div>
     </main>
   );

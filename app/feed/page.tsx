@@ -3,6 +3,7 @@
 
 import React, { useState } from "react";
 import { useTheme, WhisperType } from "../context/ThemeContext";
+import { useColorMode } from "../context/ColorModeContext";
 import { HaloSideNav, HaloBottomNav } from "../components/HaloNav";
 
 /* --------- The Spark / Echo / Beam ikonları --------- */
@@ -123,6 +124,8 @@ function WhisperComposer({
 }
 
 export default function FeedPage() {
+  const { colorMode } = useColorMode();
+  const isDark = colorMode === "dark";
   const {
     username,
     whispers,
@@ -826,12 +829,13 @@ export default function FeedPage() {
         }
       `}</style>
 
-      <div
-        className="min-h-screen w-full px-4 py-4 sm:px-6 lg:px-8 lg:py-6"
-        style={{
-          background:
-            "radial-gradient(circle at top, #FFFFFF 0%, #F3F4FA 45%, #E9EDF7 100%)",
-        }}
+      <main
+        className={
+          "min-h-screen w-full px-4 py-4 sm:px-6 lg:px-8 lg:py-6 transition-colors " +
+          (isDark
+            ? "bg-[#020617] text-slate-100"
+            : "bg-[radial-gradient(circle_at_top,_#fdfbff,_#e3f2ff)] text-slate-900")
+        }
       >
         <div className="relative mx-auto flex w-full max-w-6xl gap-6">
           <HaloSideNav />
@@ -1156,7 +1160,7 @@ export default function FeedPage() {
         </div>
 
         <HaloBottomNav />
-      </div>
+      </main>
     </>
   );
 }

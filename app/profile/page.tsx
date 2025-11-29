@@ -5,6 +5,8 @@ import React from "react";
 import Link from "next/link";
 import { useTheme } from "../context/ThemeContext";
 import { HaloSideNav, HaloBottomNav } from "../components/HaloNav";
+import { useColorMode } from "../context/ColorModeContext";
+import { useLanguage } from "../context/LanguageContext";
 
 /* --------- Yardımcı fonksiyonlar --------- */
 
@@ -30,6 +32,10 @@ function moodGradient(mood: number) {
 
 export default function ProfilePage() {
   const { username, mood, haloHistory, whispers, logout } = useTheme();
+  const { colorMode } = useColorMode();
+  const isDark = colorMode === "dark";
+  const { language } = useLanguage();
+  const isTR = language === "tr";
 
   const displayName = username || "Halo Walker";
 
@@ -149,12 +155,13 @@ export default function ProfilePage() {
         }
       `}</style>
 
-      <div
-        className="min-h-screen w-full px-4 py-4 sm:px-6 lg:px-8 lg:py-6"
-        style={{
-          background:
-            "radial-gradient(circle at top, #FFFFFF 0%, #F3F4FA 45%, #E5E9F5 100%)",
-        }}
+      <main
+        className={
+          "min-h-screen w-full px-4 py-4 sm:px-6 lg:px-8 lg:py-6 transition-colors " +
+          (isDark
+            ? "bg-[#020617] text-slate-100"
+            : "bg-[radial-gradient(circle_at_top,_#fdfbff,_#e3f2ff)] text-slate-900")
+        }
       >
         <div className="relative mx-auto flex w-full max-w-6xl gap-6">
           {/* Sol navigation (desktop) */}
@@ -166,17 +173,19 @@ export default function ProfilePage() {
               {/* Üst breadcrumb benzeri satır */}
               <div className="mb-6 flex items-center gap-4 text-sm text-slate-500">
                 <Link href="/feed" className="hover:text-slate-900 transition">
-                  Stream
+                  {isTR ? "Akış" : "Stream"}
                 </Link>
                 <span className="h-4 w-px bg-slate-200" />
                 <Link
                   href="/notifications"
                   className="hover:text-slate-900 transition"
                 >
-                  Signals
+                  {isTR ? "Sinyaller" : "Signals"}
                 </Link>
                 <span className="h-4 w-px bg-slate-200" />
-                <span className="font-medium text-slate-900">Profile</span>
+                <span className="font-medium text-slate-900">
+                  {isTR ? "Profil" : "Profile"}
+                </span>
               </div>
 
               {/* ÜST BLOK: Avatar + Halo + İsim */}
@@ -196,15 +205,17 @@ export default function ProfilePage() {
                     {displayName}
                   </h1>
                   <p className="mt-1 text-xs text-slate-500">
-                    Kelimelerini ışık halkasına dönüştüren sessiz ortak.
+                    {isTR
+                      ? "Kelimelerini ışık halkasına dönüştüren sessiz ortak."
+                      : "A quiet ally that turns your words into a ring of light."}
                   </p>
                 </div>
 
                 {/* İstatistikler */}
                 <div className="mt-4 flex w-full max-w-md flex-wrap items-center justify-center gap-4 text-center text-xs text-slate-500">
                   <div className="min-w-[90px]">
-                    <p className="text-[0.75rem] font-medium text-slate-700">
-                      Fısıltılar
+                    <p className="text-[0.75rem] font-medium text-slate-700 dark:text-slate-200">
+                      {isTR ? "Fısıltılar" : "Whispers"}
                     </p>
                     <p className="mt-0.5 text-lg font-semibold text-slate-900">
                       {whispersCount}
@@ -212,8 +223,8 @@ export default function ProfilePage() {
                   </div>
                   <div className="h-8 w-px bg-slate-200/80" />
                   <div className="min-w-[90px]">
-                    <p className="text-[0.75rem] font-medium text-slate-700">
-                      Toplam Hope
+                    <p className="text-[0.75rem] font-medium text-slate-700 dark:text-slate-200">
+                      {isTR ? "Toplam Hope" : "Total hope"}
                     </p>
                     <p className="mt-0.5 text-lg font-semibold text-slate-900">
                       {totalHopes}
@@ -221,8 +232,8 @@ export default function ProfilePage() {
                   </div>
                   <div className="h-8 w-px bg-slate-200/80 hidden sm:block" />
                   <div className="min-w-[110px] sm:block">
-                    <p className="text-[0.75rem] font-medium text-slate-700">
-                      Halo Günleri
+                    <p className="text-[0.75rem] font-medium text-slate-700 dark:text-slate-200">
+                      {isTR ? "Halo Günleri" : "Halo days"}
                     </p>
                     <p className="mt-0.5 text-lg font-semibold text-slate-900">
                       {haloHistory.length}
@@ -249,9 +260,9 @@ export default function ProfilePage() {
                           {moodLabel(lastMoodValue)}
                         </p>
                         <p className="mt-0.5 text-xs text-slate-600/90">
-                          Bugünkü halon {lastMoodValue} seviyesinde. Sistem,
-                          parlamayı zorlamadan, hâlihazırdaki ışığını nazikçe
-                          tutuyor.
+                          {isTR
+                            ? `Bugünkü halon ${lastMoodValue} seviyesinde. Sistem, parlamayı zorlamadan, hâlihazırdaki ışığını nazikçe tutuyor.`
+                            : `Your halo is at level ${lastMoodValue} today. The system gently holds your current light without forcing you to shine.`}
                         </p>
                       </div>
                       <div className="flex items-center gap-1 text-right">
@@ -268,7 +279,7 @@ export default function ProfilePage() {
                   {/* Son fısıltılar */}
                   <div className="rounded-[1.7rem] border border-slate-100/80 bg-white/80 p-4 shadow-[0_16px_55px_rgba(15,23,42,0.05)] backdrop-blur-2xl sm:p-5">
                     <p className="text-[0.7rem] font-medium tracking-[0.16em] text-slate-500/80">
-                      SON FISILTILARIN
+                      {isTR ? "SON FISILTILARIN" : "RECENT WHISPERS"}
                     </p>
 
                     {userWhispers.length === 0 ? (
@@ -312,12 +323,13 @@ export default function ProfilePage() {
                     HALO HISTORY
                   </p>
 
-                  {haloHistory.length === 0 ? (
-                    <p className="mt-3 text-xs text-slate-500">
-                      Henüz kaydedilmiş bir halo yok. Mood seçtikçe burada küçük
-                      bir ışık günlüğü oluşacak.
-                    </p>
-                  ) : (
+                    {haloHistory.length === 0 ? (
+                      <p className="mt-3 text-xs text-slate-500">
+                        {isTR
+                          ? "Henüz kaydedilmiş bir halo yok. Mood seçtikçe burada küçük bir ışık günlüğü oluşacak."
+                          : "No halo has been recorded yet. As you pick your mood, a small journal of light will appear here."}
+                      </p>
+                    ) : (
                     <div className="mt-3 space-y-2 text-xs text-slate-600">
                       {haloHistory.slice(-7).map((h, idx) => (
                         <div
@@ -362,7 +374,7 @@ export default function ProfilePage() {
             </main>
           </div>
         </div>
-      </div>
+      </main>
 
       {/* Mobil alt navigasyon */}
       <HaloBottomNav />

@@ -1,28 +1,30 @@
 // DOSYA: app/page.tsx
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { useUser } from "./context/UserContext";
+import { useLanguage } from "./context/LanguageContext";
+import { useColorMode } from "./context/ColorModeContext";
 
 export default function HomePage() {
   const router = useRouter();
-
-  // İsim için hafif bir çözüm: varsa localStorage'dan oku, yoksa genel karşılama
-  const [username, setUsername] = useState<string | null>(null);
-
-  useEffect(() => {
-    if (typeof window !== "undefined") {
-      const stored = window.localStorage.getItem("halo_username");
-      if (stored) setUsername(stored);
-    }
-  }, []);
+  const { username } = useUser();
+  const { language } = useLanguage();
+  const { colorMode } = useColorMode();
+  const isDark = colorMode === "dark";
+  const isTR = language === "tr";
 
   const [showHowHaloWorks, setShowHowHaloWorks] = useState(false);
 
-  const title = username
-    ? `Hoş geldin, ${username}`
-    : "Halo Whispers’a hoş geldin";
+  const title = isTR
+    ? username
+      ? `Hoş geldin, ${username}`
+      : "Halo Whispers’a hoş geldin"
+    : username
+    ? `Welcome, ${username}`
+    : "Welcome to Halo Whispers";
 
   return (
     <>
@@ -188,12 +190,13 @@ export default function HomePage() {
         }
       `}</style>
 
-      <div
-        className="relative min-h-[100dvh] w-full overflow-hidden"
-        style={{
-          background:
-            "radial-gradient(circle at center, #FFFFFF 0%, #F2F2F7 100%)",
-        }}
+      <main
+        className={
+          "relative min-h-[100dvh] w-full overflow-hidden transition-colors " +
+          (isDark
+            ? "bg-[#020617] text-slate-100"
+            : "bg-[radial-gradient(circle_at_top,_#fdfbff,_#e3f2ff)] text-slate-900")
+        }
       >
         <div className="relative z-10 flex min-h-[100dvh] flex-col">
           {/* NAV */}
@@ -208,13 +211,13 @@ export default function HomePage() {
                 href="/feed"
                 className="hidden text-slate-500 underline-offset-2 hover:text-slate-700 hover:underline sm:inline"
               >
-                Fısıltıları keşfet
+                {isTR ? "Fısıltıları keşfet" : "Explore whispers"}
               </Link>
               <Link
                 href="/mood"
                 className="rounded-full bg-slate-900/85 px-4 py-1.5 text-xs font-medium text-slate-50 shadow-[0_12px_30px_rgba(15,23,42,0.35)] hover:bg-slate-900"
               >
-                Mood seç
+                {isTR ? "Mood seç" : "Pick mood"}
               </Link>
             </div>
           </nav>
@@ -232,24 +235,36 @@ export default function HomePage() {
 
             {/* Metin + CTA */}
             <div className="max-w-xl text-center">
-              <h1 className="headline-intro text-3xl font-semibold tracking-tight text-slate-900 sm:text-4xl lg:text-[2.6rem]">
+              <h1 className="headline-intro text-3xl font-semibold tracking-tight text-slate-900 dark:text-slate-50 sm:text-4xl lg:text-[2.6rem]">
                 {title}
               </h1>
 
-              <p className="subtext-intro mt-4 text-sm leading-relaxed text-slate-600 sm:text-base">
-                Fısıldadığın her söz, halo’nun kalbinde{" "}
-                <span className="font-medium text-amber-600">
-                  yumuşak bir ışık
-                </span>{" "}
-                olur. Sen yaz, iyilik kendi yolunu bulur.
+              <p className="subtext-intro mt-4 text-sm leading-relaxed text-slate-600 dark:text-slate-300 sm:text-base">
+                {isTR ? (
+                  <>
+                    Fısıldadığın her söz, halo’nun kalbinde{" "}
+                    <span className="font-medium text-amber-600">
+                      yumuşak bir ışık
+                    </span>{" "}
+                    olur. Sen yaz, iyilik kendi yolunu bulur.
+                  </>
+                ) : (
+                  <>
+                    Every whisper you leave becomes a{" "}
+                    <span className="font-medium text-amber-600">
+                      soft light
+                    </span>{" "}
+                    in Halo’s heart. Write, and kindness will find its way.
+                  </>
+                )}
               </p>
 
               <div className="mt-10 flex flex-wrap items-center justify-center gap-4">
                 <button
-                  onClick={() => router.push("/mood")}
+                  onClick={() => router.push("/login")}
                   className="rounded-full bg-slate-900 px-6 py-3 text-sm font-medium text-slate-50 shadow-[0_18px_40px_rgba(15,23,42,0.35)] transition hover:bg-slate-950"
                 >
-                  Get Started
+                  {isTR ? "Başlayalım" : "Get started"}
                 </button>
 
                 <button
@@ -257,7 +272,7 @@ export default function HomePage() {
                   onClick={() => setShowHowHaloWorks(true)}
                   className="text-sm font-medium text-slate-500 underline-offset-4 transition hover:text-slate-900 hover:underline"
                 >
-                  Halo nasıl çalışıyor?
+                  {isTR ? "Halo nasıl çalışıyor?" : "How does Halo work?"}
                 </button>
               </div>
 
@@ -265,33 +280,32 @@ export default function HomePage() {
                 <div className="mt-6 inline-block max-w-xl rounded-2xl border border-white/80 bg-white/90 px-4 py-3 text-left text-xs text-slate-600 shadow-[0_18px_60px_rgba(15,23,42,0.08)] backdrop-blur-xl sm:text-[0.8rem]">
                   <div className="mb-1 flex items-center justify-between">
                     <p className="text-[0.75rem] font-semibold uppercase tracking-[0.16em] text-slate-500">
-                      Halo nasıl çalışıyor?
+                      {isTR ? "Halo nasıl çalışıyor?" : "How does Halo work?"}
                     </p>
                     <button
                       type="button"
                       onClick={() => setShowHowHaloWorks(false)}
                       className="text-[0.7rem] text-slate-400 hover:text-slate-700"
                     >
-                      Kapat
+                      {isTR ? "Kapat" : "Close"}
                     </button>
                   </div>
                   <p>
-                    Önce ruh hâlini seçiyorsun; Halo bu tonu temel alarak
-                    fısıltılarını sakince karşılıyor. Yazdığın her cümle,
-                    ekrandaki ışık halkasında küçük bir titreşim gibi
-                    saklanıyor. Hope verdiğinde kıvılcım parlıyor, yorumlar
-                    ise sesi yankıya dönüştürüyor.
+                    {isTR
+                      ? "Önce ruh hâlini seçiyorsun; Halo bu tonu temel alarak fısıltılarını sakince karşılıyor. Yazdığın her cümle, ekrandaki ışık halkasında küçük bir titreşim gibi saklanıyor. Hope verdiğinde kıvılcım parlıyor, yorumlar ise sesi yankıya dönüştürüyor."
+                      : "First choose your mood; Halo welcomes your whispers in that tone. Each line you write settles as a small vibration in the halo. Sending Hope adds a spark; comments echo the voice."}
                   </p>
                   <p className="mt-2 text-[0.72rem] text-slate-500">
-                    Hazır hissettiğinde Stream’e geçip hem kendi fısıltılarını,
-                    hem de başkalarının bıraktığı ışıkları görebilirsin.
+                    {isTR
+                      ? "Hazır hissettiğinde Stream’e geçip hem kendi fısıltılarını, hem de başkalarının bıraktığı ışıkları görebilirsin."
+                      : "When ready, switch to the Stream to see your whispers and the lights others leave behind."}
                   </p>
                 </div>
               )}
             </div>
           </main>
         </div>
-      </div>
+      </main>
     </>
   );
 }
