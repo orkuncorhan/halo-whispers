@@ -7,10 +7,16 @@ import { useRouter } from "next/navigation";
 import { useTheme } from "../context/ThemeContext";
 import { HaloOrb } from "../components/HaloOrb";
 import HaloBrandMark from "../components/HaloBrandMark";
+import { useLanguage } from "../context/LanguageContext";
+import { useColorMode } from "../context/ColorModeContext";
 
 export default function MoodPage() {
   const router = useRouter();
   const { mood, setMood, confirmMoodForToday } = useTheme();
+  const { language } = useLanguage();
+  const { colorMode } = useColorMode();
+  const isDark = colorMode === "dark";
+  const isTR = language === "tr";
 
   const moodLabel = mood < 40 ? "Heavy" : mood > 60 ? "Light" : "Neutral";
 
@@ -145,16 +151,15 @@ export default function MoodPage() {
         }
       `}</style>
 
-      <div
-        className="min-h-[100dvh] w-full flex items-center justify-center px-4 sm:px-6 lg:px-10 py-8 lg:py-12"
-        style={{
-          background:
-            "radial-gradient(circle at top, #FFFFFF 0%, #F3F4FA 45%, #ECEFF7 100%)",
-        }}
+      <main
+        className={
+          "min-h-[100dvh] w-full flex items-center justify-center px-4 sm:px-6 lg:px-10 py-8 lg:py-12 transition-colors " +
+          (isDark ? "bg-[#020617] text-slate-100" : "bg-[radial-gradient(circle_at_top,_#fdfbff,_#e3f2ff)] text-slate-900")
+        }
       >
         <div className="mx-auto flex max-w-5xl flex-col gap-8 rounded-[2.5rem] bg-white/78 p-6 shadow-[0_30px_120px_rgba(15,23,42,0.18)] backdrop-blur-2xl sm:p-8 lg:flex-row lg:items-center lg:gap-10 lg:p-10">
           <div className="flex items-center gap-3 px-2">
-            <HaloBrandMark size={30} />
+            <HaloBrandMark />
             <span className="text-lg font-semibold text-slate-900">Halo</span>
           </div>
 
@@ -181,23 +186,23 @@ export default function MoodPage() {
           {/* Sağ: Metin + slider */}
           <div className="w-full lg:w-1/2">
             <p className="text-[0.8rem] font-medium text-slate-500">
-              Welcome space
+              {isTR ? "Karşılama alanı" : "Welcome space"}
             </p>
 
             <h1 className="mt-2 text-3xl font-semibold tracking-tight text-slate-900 sm:text-4xl">
-              Halo Whispers
+              {isTR ? "Bugünkü halon nasıl?" : "How is your halo today?"}
             </h1>
 
             <p className="mt-3 text-sm leading-relaxed text-slate-600 sm:text-base">
-              İçindeki sesi, iyilikle yankılanan bir frekansa ayarla. Halo,
-              hislerini yargılamadan dinler; sen sadece kendini olduğun gibi
-              fısılda.
+              {isTR
+                ? "İçindeki sesi, iyilikle yankılanan bir frekansa ayarla. Halo, hislerini yargılamadan dinler; sen sadece kendini olduğun gibi fısılda."
+                : "Tune your inner voice to a frequency that echoes with kindness. Halo listens without judgment; just whisper as you are."}
             </p>
 
             {/* Mood alanı */}
             <div className="mt-7">
               <div className="flex items-center justify-between text-[0.8rem] text-slate-500">
-                <span>Ruh hâli</span>
+                <span>{isTR ? "Ruh hâli" : "Mood"}</span>
                 <span
                   className={
                     moodLabel === "Neutral"
@@ -223,9 +228,9 @@ export default function MoodPage() {
 
                 {/* Alt etiketler */}
                 <div className="mt-2 flex justify-between text-[0.75rem] text-slate-400">
-                  <span>Heavy</span>
-                  <span>Neutral</span>
-                  <span>Light</span>
+                  <span>{isTR ? "Ağır" : "Heavy"}</span>
+                  <span>{isTR ? "Nötr" : "Neutral"}</span>
+                  <span>{isTR ? "Hafif" : "Light"}</span>
                 </div>
               </div>
             </div>
@@ -236,19 +241,19 @@ export default function MoodPage() {
                 onClick={handleConfirm}
                 className="inline-flex flex-1 items-center justify-center rounded-full bg-slate-900/90 px-6 py-2.5 text-sm font-medium text-slate-50 shadow-[0_20px_50px_rgba(15,23,42,0.40)] hover:bg-slate-900"
               >
-                Enter the Stream
+                {isTR ? "Akışa geç" : "Enter the Stream"}
               </button>
 
               <Link
                 href="/"
                 className="text-xs text-slate-500 underline-offset-4 hover:text-slate-700 hover:underline sm:text-[0.8rem]"
               >
-                Geri dön
+                {isTR ? "Geri dön" : "Go back"}
               </Link>
             </div>
           </div>
         </div>
-      </div>
+      </main>
     </>
   );
 }

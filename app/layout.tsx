@@ -1,6 +1,9 @@
 // DOSYA: app/layout.tsx
 import "./globals.css";
 import { ThemeProvider } from "./context/ThemeContext";
+import { UserProvider } from "./context/UserContext";
+import { ColorModeProvider } from "./context/ColorModeContext";
+import { LanguageProvider } from "./context/LanguageContext";
 import PageTransition from "./components/PageTransition";
 import type React from "react";
 
@@ -28,9 +31,15 @@ export default function RootLayout({
 
           {/* Sayfa içerikleri – halo sahnesinin üstünde */}
           <div className="relative z-10">
-            <ThemeProvider>
-              <PageTransition>{children}</PageTransition>
-            </ThemeProvider>
+            <ColorModeProvider>
+              <LanguageProvider>
+                <UserProvider>
+                  <ThemeProvider>
+                    <PageTransition>{children}</PageTransition>
+                  </ThemeProvider>
+                </UserProvider>
+              </LanguageProvider>
+            </ColorModeProvider>
           </div>
         </div>
       </body>
