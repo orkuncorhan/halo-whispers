@@ -2,24 +2,29 @@
 "use client";
 
 import React, { createContext, useContext, useState, useEffect } from "react";
+import { createClient } from "@/lib/supabase/client";
+import { useUser } from "./UserContext";
 // Supabase bağlantısı (Eğer supabase kullanmıyorsak burası hata verebilir, 
 // şimdilik MVP için LocalStorage versiyonunu veriyorum ki hata almayasın)
 
 // Fısıltı Tipi (Tüm özellikler burada tanımlı)
 export interface WhisperType {
-  id: number;
+  id: string;
   username: string;
   time: string;
   content: string;
+  mood: string;
   hop: number;          // <-- Bu eksikti, eklendi
   color: string;
   comments: CommentType[];
   isUserPost?: boolean;
   isLiked?: boolean;
+  authorUsername?: string | null;
+  authorDisplayName?: string | null;
 }
 
 export interface CommentType {
-  id: number;
+  id: string;
   username: string;
   content: string;
   time: string;
@@ -48,25 +53,52 @@ interface ThemeContextType {
   logout: () => void;
   getThemeColors: () => ThemeColorsType;
   whispers: WhisperType[];
-  addWhisper: (text: string, themeColor?: string) => void;
-  deleteWhisper: (id: number) => void;
-  toggleLike: (id: number) => void;
+  addWhisper: (text: string, options?: { id?: string; themeColor?: string }) => void;
+  deleteWhisper: (id: string) => void;
+  toggleLike: (id: string) => void;
   isMoodSetToday: boolean;
   confirmMoodForToday: () => void;
-  addComment: (whisperId: number, text: string) => void;
-  deleteComment: (whisperId: number, commentId: number) => void;
+  addComment: (whisperId: string, text: string) => void;
+  deleteComment: (whisperId: string, commentId: string) => void;
   filterToxic: (text: string) => { ok: boolean; word?: string };
+  setWhispers: (list: WhisperType[]) => void;
+  isContentToxic: (text: string) => boolean;
 }
 
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
+const TOXIC_WORDS = [
+  "sik",
+  "siktir",
+  "aq",
+  "amk",
+  "yarak",
+  "orospu",
+  "orospu çocuğu",
+  "göt",
+  "piç",
+  "salak",
+  "aptal",
+  "gerizekalı",
+  "mal",
+  "kahpe",
+  "ibne",
+  "yarrak",
+  "fuck",
+  "shit",
+  "bitch",
+  "bok",
+];
+
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
+  const { userId, username: userUsername } = useUser();
+  const supabase = createClient();
   const [mood, setMoodState] = useState(50);
   const [username, setUsernameState] = useState<string | null>(null);
   const [isMoodSetToday, setIsMoodSetToday] = useState(false);
   
   // Temiz Başlangıç
-  const [whispers, setWhispers] = useState<WhisperType[]>([]);
+  const [whispers, setWhispersState] = useState<WhisperType[]>([]);
   
   // Grafik Başlangıç
   const [haloHistory, setHaloHistory] = useState<{ name: string; value: number }[]>([
@@ -86,11 +118,16 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
       if (savedWhispers) {
         const parsed: WhisperType[] = JSON.parse(savedWhispers);
         // Yeni eklenen alanlar için geriye dönük düzenleme
-        setWhispers(
+        setWhispersState(
           parsed.map((w) => ({
             ...w,
+            id: w.id ? String(w.id) : crypto.randomUUID(),
+            mood: w.mood ? String(w.mood) : "neutral",
             hop: typeof w.hop === "number" ? w.hop : 0,
-            comments: w.comments ?? [],
+            comments: (w.comments ?? []).map((c: any) => ({
+              ...c,
+              id: c.id ? String(c.id) : crypto.randomUUID(),
+            })),
             isLiked: w.isLiked ?? false,
             isUserPost: w.isUserPost ?? false,
             color: w.color ?? getThemeColors().halo,
@@ -141,88 +178,126 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     if (typeof window !== "undefined") localStorage.setItem("halo_username", name);
   };
 
-  const addWhisper = (text: string, themeColor = getThemeColors().halo) => {
+  const addWhisper = (
+    text: string,
+    options?: { id?: string; themeColor?: string }
+  ) => {
+    const now = new Date();
+    const generatedId = options?.id ?? (crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random().toString(16).slice(2)}`);
     const newWhisper: WhisperType = {
-      id: Date.now(),
+      id: generatedId,
       username: username || "Halo Walker",
-      time: "Just now",
+      time: now.toLocaleTimeString("tr-TR", {
+        hour: "2-digit",
+        minute: "2-digit",
+      }),
       content: text,
+      mood: String(mood),
       hop: 0,
-      color: themeColor,
+      color: options?.themeColor ?? getThemeColors().halo,
       comments: [],
       isUserPost: true,
       isLiked: false,
     };
-    setWhispers((prev) => {
+    setWhispersState((prev) => {
       const updated = [newWhisper, ...prev];
       if (typeof window !== "undefined") localStorage.setItem("halo_whispers", JSON.stringify(updated));
       return updated;
     });
   };
 
-  const deleteWhisper = (id: number) => {
-    setWhispers((prev) => {
+  const deleteWhisper = (id: string) => {
+    setWhispersState((prev) => {
       const updated = prev.filter(w => w.id !== id);
       if (typeof window !== "undefined") localStorage.setItem("halo_whispers", JSON.stringify(updated));
       return updated;
     });
   };
 
-  const addComment = (whisperId: number, text: string) => {
+  const addComment = (whisperId: string, text: string) => {
+    if (!userId) {
+      alert("Yorum yazmak için önce giriş yapman gerekiyor.");
+      return;
+    }
+
+    // Aynı id'yi hem local state'te hem Supabase'te kullanacağız
+    const newCommentId = crypto.randomUUID();
+    const authorName = username || userUsername || "Halo Walker";
+
     const newComment: CommentType = {
-      id: Date.now(),
-      username: username || "Halo Walker",
+      id: newCommentId,
+      username: authorName,
       content: text,
       time: "Just now",
     };
 
-    setWhispers((prev) => {
+    // Önce UI'da hemen göster (optimistic update)
+    setWhispersState((prev) => {
       const updated = prev.map((w) =>
         w.id === whisperId
           ? { ...w, comments: [...(w.comments ?? []), newComment] }
           : w
       );
-      if (typeof window !== "undefined") localStorage.setItem("halo_whispers", JSON.stringify(updated));
+      if (typeof window !== "undefined") {
+        localStorage.setItem("halo_whispers", JSON.stringify(updated));
+      }
       return updated;
     });
+
+    // Sonra Supabase'e kaydet (fire-and-forget)
+    supabase
+      .from("comments")
+      .insert({
+        id: newCommentId,
+        whisper_id: whisperId,
+        author_id: userId,
+        author_name: authorName,
+        content: text,
+      })
+      .then(({ error }) => {
+        if (error) {
+          console.error("Supabase comment insert error:", error);
+        }
+      });
   };
 
-  const deleteComment = (whisperId: number, commentId: number) => {
-    setWhispers((prev) => {
+  const deleteComment = (whisperId: string, commentId: string) => {
+    // Önce UI'dan kaldır (optimistic update)
+    setWhispersState((prev) => {
       const updated = prev.map((w) =>
         w.id === whisperId
-          ? { ...w, comments: (w.comments ?? []).filter((c) => c.id !== commentId) }
+          ? {
+              ...w,
+              comments: (w.comments ?? []).filter((c) => c.id !== commentId),
+            }
           : w
       );
-      if (typeof window !== "undefined") localStorage.setItem("halo_whispers", JSON.stringify(updated));
+      if (typeof window !== "undefined") {
+        localStorage.setItem("halo_whispers", JSON.stringify(updated));
+      }
       return updated;
     });
+
+    // Sonra Supabase'ten sil
+    supabase
+      .from("comments")
+      .delete()
+      .eq("id", commentId)
+      .then(({ error }) => {
+        if (error) {
+          console.error("Supabase comment delete error:", error);
+        }
+      });
+  };
+
+  const isContentToxic = (text: string): boolean => {
+    if (!text) return false;
+
+    const lower = text.toLowerCase();
+    return TOXIC_WORDS.some((word) => lower.includes(word));
   };
 
   const filterToxic = (text: string) => {
-    const TOXIC_WORDS = [
-      "sik",
-      "siktir",
-      "aq",
-      "amk",
-      "yarak",
-      "orospu",
-      "orospu çocuğu",
-      "göt",
-      "piç",
-      "salak",
-      "aptal",
-      "gerizekalı",
-      "mal",
-      "kahpe",
-      "ibne",
-      "yarrak",
-      "fuck",
-      "shit",
-      "bitch",
-      "bok",
-    ];
-
     const foundWord = TOXIC_WORDS.find((badWord) => {
       const pattern = new RegExp(`\\b${badWord}\\b`, "i");
       return pattern.test(text);
@@ -231,8 +306,8 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     return { ok: !foundWord, word: foundWord };
   };
 
-  const toggleLike = (id: number) => {
-    setWhispers((prev) => {
+  const toggleLike = (id: string) => {
+    setWhispersState((prev) => {
       const updated = prev.map((w) => {
         if (w.id === id) {
           const isLiked = !!w.isLiked;
@@ -259,7 +334,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const logout = () => {
     setUsernameState(null);
     setMoodState(50);
-    setWhispers([]);
+    setWhispersState([]);
     setHaloHistory([{ name: 'Today', value: 50 }]);
     setIsMoodSetToday(false);
     if (typeof window !== "undefined") localStorage.clear();
@@ -305,7 +380,28 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   };
 
   return (
-    <ThemeContext.Provider value={{ mood, setMood, username, setUsername, haloHistory, logout, getThemeColors, whispers, addWhisper, deleteWhisper, toggleLike, isMoodSetToday, confirmMoodForToday, addComment, deleteComment, filterToxic }}>
+    <ThemeContext.Provider
+      value={{
+        mood,
+        setMood,
+        username,
+        setUsername,
+        haloHistory,
+        logout,
+        getThemeColors,
+        whispers,
+        addWhisper,
+        deleteWhisper,
+        toggleLike,
+        isMoodSetToday,
+        confirmMoodForToday,
+        addComment,
+        deleteComment,
+        filterToxic,
+        isContentToxic,
+        setWhispers: (list) => setWhispersState(list),
+      }}
+    >
       {children}
     </ThemeContext.Provider>
   );

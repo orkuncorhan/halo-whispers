@@ -1,92 +1,112 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { useUser } from "../context/UserContext";
-import { useLanguage } from "../context/LanguageContext";
-import { GlassCard } from "../components/GlassCard";
+import { createClient } from "@/lib/supabase/client";
 
 export default function LoginPage() {
-  const { setUsername, isLoggedIn } = useUser();
-  const { language } = useLanguage();
-  const isTR = language === "tr";
-
+  const supabase = createClient();
   const router = useRouter();
-  const [value, setValue] = useState("");
-  const [error, setError] = useState("");
 
-  useEffect(() => {
-    if (isLoggedIn) {
-      router.replace("/feed");
-    }
-  }, [isLoggedIn, router]);
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [mode, setMode] = useState<"login" | "signup">("login");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    const trimmed = value.trim();
+    setError(null);
+    setLoading(true);
 
-    if (!trimmed) {
-      setError(
-        isTR
-          ? "Önce fısıldarken kullanacağın bir isim seç."
-          : "Choose a name you’ll use for your whispers."
-      );
-      return;
+    try {
+      if (mode === "signup") {
+        const { error } = await supabase.auth.signUp({
+          email,
+          password,
+        });
+        if (error) throw error;
+      } else {
+        const { error } = await supabase.auth.signInWithPassword({
+          email,
+          password,
+        });
+        if (error) throw error;
+      }
+
+      // Giriş/Kayıt başarılı → feed sayfasına gönder
+      router.push("/feed");
+    } catch (err: any) {
+      setError(err.message ?? "Bir şey ters gitti.");
+    } finally {
+      setLoading(false);
     }
-
-    if (trimmed.length > 20) {
-      setError(
-        isTR
-          ? "20 karakteri geçmeyen bir isim seçelim."
-          : "Please keep it under 20 characters."
-      );
-      return;
-    }
-
-    setUsername(trimmed);
-    router.push("/mood");
-  };
+  }
 
   return (
-    <main className="min-h-screen flex items-center justify-center bg-[var(--halo-page-bg)]">
-      <div className="w-full max-w-md px-6">
-        <GlassCard className="p-6 md:p-8 flex flex-col gap-4">
-          <h1 className="text-2xl font-semibold tracking-tight">
-            {isTR ? "Halo adını seç" : "Choose your halo name"}
-          </h1>
-          <p className="text-sm text-neutral-600">
-            {isTR
-              ? "Bu isim fısıltılarında görünecek. Daha sonra Ayarlar kısmından değiştirebilirsin."
-              : "This name will appear with your whispers. You can change it later in Settings."}
-          </p>
+    <div className="min-h-screen flex items-center justify-center px-4">
+      <div className="w-full max-w-md border rounded-2xl p-6 space-y-6 bg-white/70 backdrop-blur">
+        <h1 className="text-2xl font-semibold text-center">
+          {mode === "login" ? "Halo Whispers'a Giriş Yap" : "Halo Whispers'a Katıl"}
+        </h1>
 
-          <form onSubmit={handleSubmit} className="flex flex-col gap-4 mt-2">
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="space-y-2">
+            <label className="block text-sm font-medium">E-posta</label>
             <input
-              type="text"
-              value={value}
-              onChange={(e) => {
-                setValue(e.target.value);
-                setError("");
-              }}
-              placeholder={
-                isTR ? "örneğin: softsunrise" : "for example: softsunrise"
-              }
-              className="w-full rounded-xl border border-neutral-200 px-4 py-2.5 text-sm outline-none focus:border-neutral-900 focus:ring-1 focus:ring-neutral-900 bg-white/60 backdrop-blur"
+              type="email"
+              className="w-full border rounded-lg px-3 py-2 text-sm outline-none"
+              placeholder="you@example.com"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              required
             />
+          </div>
 
-            {error && (
-              <p className="text-xs text-red-500 leading-snug">{error}</p>
-            )}
+          <div className="space-y-2">
+            <label className="block text-sm font-medium">Şifre</label>
+            <input
+              type="password"
+              className="w-full border rounded-lg px-3 py-2 text-sm outline-none"
+              placeholder="En az 6 karakter"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              required
+              minLength={6}
+            />
+          </div>
 
-            <button
-              type="submit"
-              className="mt-1 inline-flex items-center justify-center rounded-xl px-4 py-2.5 text-sm font-medium bg-neutral-900 text-white hover:bg-neutral-800 transition"
-            >
-              {isTR ? "Halo’ya giriş yap" : "Enter Halo"}
-            </button>
-          </form>
-        </GlassCard>
+          {error && (
+            <p className="text-sm text-red-600">
+              {error}
+            </p>
+          )}
+
+          <button
+            type="submit"
+            disabled={loading}
+            className="w-full rounded-lg px-3 py-2 text-sm border bg-black text-white disabled:opacity-60"
+          >
+            {loading
+              ? "İşleniyor..."
+              : mode === "login"
+                ? "Giriş Yap"
+                : "Kayıt Ol"}
+          </button>
+        </form>
+
+        <button
+          type="button"
+          className="w-full text-xs underline"
+          onClick={() =>
+            setMode(mode === "login" ? "signup" : "login")
+          }
+        >
+          {mode === "login"
+            ? "Hesabın yok mu? Kayıt ol"
+            : "Zaten hesabın var mı? Giriş yap"}
+        </button>
       </div>
-    </main>
+    </div>
   );
 }

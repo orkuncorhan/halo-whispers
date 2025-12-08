@@ -132,7 +132,7 @@ export default function NotificationsPage() {
       >
         {/* SOL: LOGO + BAŞLIK */}
         <div className="flex items-center gap-3">
-          <HaloBrandMark size={26} />
+          <HaloBrandMark />
           <h1 className="text-xl font-semibold text-slate-900">
             {isTR ? "Bildirimler" : "Notifications"}
           </h1>

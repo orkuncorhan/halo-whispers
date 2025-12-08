@@ -1,8 +1,10 @@
 // DOSYA: app/feed/page.tsx
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useTheme, WhisperType } from "../context/ThemeContext";
+import { useUser } from "../context/UserContext";
+import { createClient } from "@/lib/supabase/client";
 import { useColorMode } from "../context/ColorModeContext";
 import { HaloSideNav, HaloBottomNav } from "../components/HaloNav";
 
@@ -124,22 +126,197 @@ function WhisperComposer({
 }
 
 export default function FeedPage() {
+  const { userId, username } = useUser();
   const { colorMode } = useColorMode();
   const isDark = colorMode === "dark";
   const {
-    username,
+    mood,
     whispers,
     addWhisper,
     toggleLike,
     filterToxic,
     addComment,
+    setWhispers,
+    getThemeColors,
+    isContentToxic,
   } = useTheme();
-  const [text, setText] = useState("");
+  const supabase = createClient();
 
-  const handleSendWhisper = () => {
+  useEffect(() => {
+    const loadFeed = async () => {
+      try {
+        const { data, error } = await supabase
+          .from("whispers")
+          .select(
+            `
+          id,
+          user_id,
+          content,
+          mood,
+          created_at,
+          profiles (
+            username,
+            display_name
+          ),
+          comments (
+            id,
+            author_name,
+            content,
+            created_at
+          ),
+          likes (
+            user_id
+          )
+        `
+          )
+          .order("created_at", { ascending: false });
+
+        if (error) {
+          console.error("Whispers yüklenemedi:", error);
+          return;
+        }
+
+        if (!data) return;
+
+        const mapped = (data ?? []).map((row: any): WhisperType => {
+          const rowLikes = row.likes ?? [];
+          const hop = rowLikes.length;
+
+          const profile = row.profiles ?? {};
+          const authorUsername = profile.username ?? null;
+          const authorDisplayName = profile.display_name ?? null;
+
+          const themeColors = getThemeColors();
+          const isLiked =
+            !!userId && rowLikes.some((l: any) => l.user_id === userId);
+
+          return {
+            id: row.id,
+            username: authorUsername ?? "Halo Walker",
+            content: row.content,
+            mood: row.mood ?? "neutral",
+            hop,
+            color: themeColors.halo,
+            isLiked,
+            isUserPost: !!userId && row.user_id === userId,
+            time: new Date(row.created_at ?? Date.now()).toLocaleString(
+              "tr-TR",
+              {
+                hour: "2-digit",
+                minute: "2-digit",
+              }
+            ),
+            comments: (row.comments ?? []).map((c: any) => ({
+              id: c.id,
+              username: c.author_name ?? "halo",
+              content: c.content,
+              time: new Date(
+                c.created_at ?? Date.now()
+              ).toLocaleTimeString("tr-TR", {
+                hour: "2-digit",
+                minute: "2-digit",
+              }),
+            })),
+            authorUsername,
+            authorDisplayName,
+          } as WhisperType;
+        }) as WhisperType[];
+
+        setWhispers(mapped);
+      } catch (err) {
+        console.error("Whispers fetch hatası:", err);
+      }
+    };
+
+    loadFeed();
+  }, [supabase, setWhispers, userId]);
+  const [text, setText] = useState("");
+  // Supabase’ten gelen fısıltılar
+  const [dbWhispers, setDbWhispers] = useState<WhisperType[]>([]);
+  const handleToggleHope = async (w: WhisperType) => {
+    if (!userId) {
+      alert("Önce giriş yapman gerekiyor.");
+      return;
+    }
+
+    const wasLiked = w.isLiked;
+    toggleLike(w.id);
+
+    try {
+      if (wasLiked) {
+        const { error } = await supabase
+          .from("likes")
+          .delete()
+          .eq("whisper_id", w.id)
+          .eq("user_id", userId);
+
+        if (error) {
+          console.error("Like silinemedi:", error);
+        }
+      } else {
+        const { error } = await supabase.from("likes").insert({
+          whisper_id: w.id,
+          user_id: userId,
+        });
+
+        if (error) {
+          console.error("Like eklenemedi:", error);
+        }
+      }
+    } catch (err) {
+      console.error("Hope toggle hatası:", err);
+    }
+  };
+
+  const handleReportWhisper = async (w: WhisperType) => {
+    if (!userId) {
+      alert("Bir fısıltıyı bildirmek için önce giriş yapman gerekiyor.");
+      return;
+    }
+
+    const reason = window.prompt(
+      "Bu fısıltıyı neden bildiriyorsun? (İsteğe bağlı)",
+      ""
+    );
+
+    // Kullanıcı iptal ederse
+    if (reason === null) return;
+
+    const supabase = createClient();
+
+    const { error } = await supabase.from("whisper_reports").insert({
+      whisper_id: w.id,
+      reporter_id: userId,
+      reason: reason.trim() || null,
+    });
+
+    if (error) {
+      console.error("Report insert error:", error);
+      alert("Bildirimi kaydederken bir hata oluştu.");
+      return;
+    }
+
+    alert("Teşekkürler, bu fısıltı moderasyon için işaretlendi.");
+  };
+
+  const handleSendWhisper = async () => {
+    if (!userId) {
+      alert("Fısıltı göndermek için önce giriş yapman gerekiyor.");
+      return;
+    }
+
     const trimmed = text.trim();
     if (!trimmed) return;
 
+    // Moderasyon filtresi: toksik içerik DB'ye gitmesin
+    if (isContentToxic(trimmed)) {
+      alert(
+        "Bu fısıltı Halo Whispers topluluk kurallarına uygun değil. Lütfen daha nazik bir dil kullan."
+      );
+      return;
+    }
+
+    // 1) Toksisite filtresi
     const check = filterToxic(trimmed);
     if (!check.ok) {
       alert(
@@ -148,29 +325,265 @@ export default function FeedPage() {
       return;
     }
 
-    addWhisper(trimmed);
+    // Anti-spam: aynı kullanıcı 10 saniyeden kısa sürede tekrar fısıltı atamasın
+    const { data: recentWhispers, error: recentError } = await supabase
+      .from("whispers")
+      .select("created_at")
+      .eq("user_id", userId)
+      .order("created_at", { ascending: false })
+      .limit(1);
+
+    if (!recentError && recentWhispers && recentWhispers.length > 0) {
+      const last = recentWhispers[0] as { created_at: string | null };
+      if (last.created_at) {
+        const lastTime = new Date(last.created_at).getTime();
+        const now = Date.now();
+        const diffSeconds = (now - lastTime) / 1000;
+
+        if (diffSeconds < 10) {
+          alert("Fısıltılar arasında en az 10 saniye beklemelisin.");
+          return;
+        }
+      }
+    }
+
+    // 2) Supabase'e kaydetmeyi dene ama auth zorunlu olmasın
+    let supabaseId: string | undefined = undefined;
+
+    try {
+      const insertPayload: any = {
+        content: trimmed,
+        mood,
+      };
+
+      // Kullanıcı giriş yaptıysa user_id ekle
+      if (userId) {
+        insertPayload.user_id = userId;
+      }
+
+      const { data, error } = await supabase
+        .from("whispers")
+        .insert(insertPayload)
+        .select("id")
+        .single();
+
+      if (error) throw error;
+      if (data?.id) {
+        supabaseId = data.id as string;
+      }
+    } catch (err) {
+      console.error("Supabase'e kaydederken hata:", err);
+      // Şimdilik sessiz geçiyoruz, kullanıcıyı durdurmuyoruz.
+    }
+
+    // 3) Lokal state'i HER HALDE güncelle
+    addWhisper(trimmed, { id: supabaseId });
+
+    // 4) Alanı temizle
     setText("");
   };
 
+  useEffect(() => {
+    const loadWhispers = async () => {
+      try {
+        const { data, error } = await supabase
+          .from("whispers")
+          .select(
+            `
+            id,
+            content,
+            mood,
+            created_at,
+            user_id,
+            profiles (
+              username,
+              display_name
+            )
+          `
+          )
+          .order("created_at", { ascending: false });
+
+        if (error) {
+          console.error("Whispers yüklenemedi:", error);
+          return;
+        }
+
+        const mapped = (data ?? []).map(
+          (row: any): WhisperType => {
+          const createdAt = row.created_at
+            ? new Date(row.created_at)
+            : new Date();
+
+          const timeStr = createdAt.toLocaleString("tr-TR", {
+            hour: "2-digit",
+            minute: "2-digit",
+            day: "2-digit",
+            month: "short",
+          });
+
+          return {
+            id: String(row.id),
+            content: row.content ?? "",
+            mood: row.mood ?? "neutral",
+            hop: 0,
+            isLiked: false,
+            isUserPost:
+              userId && row.user_id === userId ? true : false,
+            comments: [],
+            time: timeStr,
+            username: row.profiles?.username ?? "",
+            color: "",
+            authorUsername: row.profiles?.username ?? null,
+            authorDisplayName: row.profiles?.display_name ?? null,
+          };
+        }
+        );
+
+        setDbWhispers(mapped);
+      } catch (err) {
+        console.error("Whispers alınırken beklenmeyen hata:", err);
+      }
+    };
+
+    loadWhispers();
+  }, [supabase, userId]);
+
+  useEffect(() => {
+    const supabaseRealtime = createClient();
+
+    const channel = supabaseRealtime
+      .channel("whispers-realtime")
+      .on(
+        "postgres_changes",
+        {
+          event: "INSERT",
+          schema: "public",
+          table: "whispers",
+        },
+        async (payload) => {
+          try {
+            const newId = (payload.new as any).id as string;
+            if (!newId) return;
+
+            const { data, error } = await supabaseRealtime
+              .from("whispers")
+              .select(
+                `
+                   id,
+                   user_id,
+                   content,
+                   mood,
+                   created_at,
+                   profiles (
+                     username,
+                     display_name
+                   ),
+                   comments (
+                     id,
+                     author_name,
+                     content,
+                     created_at
+                   ),
+                   likes (
+                     user_id
+                   )
+                   `
+              )
+              .eq("id", newId)
+              .maybeSingle();
+
+            if (error || !data) {
+              console.error("Realtime whisper fetch error:", error);
+              return;
+            }
+
+            const themeColors = getThemeColors();
+
+            const isLiked =
+              !!userId && (data.likes ?? []).some((l: any) => l.user_id === userId);
+            const hop = data.likes ? data.likes.length : 0;
+            const profile = (data as any).profiles ?? {};
+            const authorUsername = profile.username ?? null;
+            const authorDisplayName = profile.display_name ?? null;
+
+            const mapped = {
+              id: data.id,
+              username: authorUsername ?? "Halo Walker",
+              content: data.content,
+              mood: data.mood ?? "neutral",
+              hop,
+              color: themeColors.halo,
+              isLiked,
+              isUserPost: !!userId && data.user_id === userId,
+              time: new Date(
+                data.created_at ?? Date.now()
+              ).toLocaleString("tr-TR", {
+                hour: "2-digit",
+                minute: "2-digit",
+              }),
+              comments: (data.comments ?? []).map((c: any) => ({
+                id: c.id,
+                username: c.author_name ?? "halo",
+                content: c.content,
+                time: new Date(
+                  c.created_at ?? Date.now()
+                ).toLocaleTimeString("tr-TR", {
+                  hour: "2-digit",
+                  minute: "2-digit",
+                }),
+              })),
+              authorUsername,
+              authorDisplayName,
+            } as any;
+
+            const withoutExisting = whispers.filter((w) => w.id !== mapped.id);
+            setWhispers([mapped, ...withoutExisting]);
+          } catch (err) {
+            console.error("Realtime handler error:", err);
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabaseRealtime.removeChannel(channel);
+    };
+  }, [setWhispers, getThemeColors, userId, whispers]);
+
   const remaining = 280 - text.length;
-  const displayName = username || "orkun";
+  const displayName = username || "";
   const hasText = text.trim().length > 0;
 
   // Hangi fısıltının yorum paneli açık?
-  const [openCommentsFor, setOpenCommentsFor] = useState<number | null>(null);
+  const [openCommentsFor, setOpenCommentsFor] = useState<string | null>(null);
 
   // Her fısıltı için taslak yorum metni
-  const [commentDrafts, setCommentDrafts] = useState<Record<number, string>>(
+  const [commentDrafts, setCommentDrafts] = useState<Record<string, string>>(
     {}
   );
 
   // Beam (paylaş) için kısa süreli animasyon durumu
-  const [sharedId, setSharedId] = useState<number | null>(null);
+  const [sharedId, setSharedId] = useState<string | null>(null);
 
   const [showOnlyMine, setShowOnlyMine] = useState(false);
-  const visibleWhispers = showOnlyMine
-    ? whispers.filter((w) => w.isUserPost)
-    : whispers;
+
+  // Supabase’ten gelenler + front-end’den eklediklerin
+  const allWhispers = [...dbWhispers, ...whispers];
+
+  const visibleWhispers = showOnlyMine && !!userId
+    ? allWhispers.filter((w) => w.isUserPost)
+    : allWhispers;
+
+  // Aynı id'ye sahip fısıltıları tekilleştir (React key hatasını önlemek için)
+  const dedupedVisibleWhispers = React.useMemo(() => {
+    const map = new Map<string | number, WhisperType>();
+    for (const w of visibleWhispers) {
+      if (!map.has(w.id)) {
+        map.set(w.id, w);
+      }
+    }
+    return Array.from(map.values());
+  }, [visibleWhispers]);
 
   const [expandedWhisper, setExpandedWhisper] = useState<WhisperType | null>(
     null
@@ -189,7 +602,7 @@ export default function FeedPage() {
     if (typeof window === "undefined") return;
 
     const shareUrl = `${window.location.origin}/?whisper=${w.id}`;
-    const shareText = `"${w.content}" — @${w.username} • Halo Whispers`;
+    const shareText = `"${w.content}" — @${displayName} • Halo Whispers`;
 
     try {
       // 1) Web Share API destekliyse (mobil tarayıcılar, Safari, Chrome vb.)
@@ -892,19 +1305,24 @@ export default function FeedPage() {
                   </div>
                 </div>
 
-                {visibleWhispers.length === 0 ? (
+                {dedupedVisibleWhispers.length === 0 ? (
                   <p className="mt-6 text-center text-xs text-slate-500">
                     Şu an burada hiç fısıltı yok. İlk cümleni yazdığında, bu
                     alan da ışıkla dolacak.
                   </p>
                 ) : (
-                  visibleWhispers.map((w) => {
+                  dedupedVisibleWhispers.map((w, index) => {
                     const hasComments = (w.comments ?? []).length > 0;
                     const isCommentsOpen = openCommentsFor === w.id;
                     const commentDraft = commentDrafts[w.id] ?? "";
+                    const authorLabel =
+                      w.authorUsername ||
+                      w.authorDisplayName ||
+                      displayName ||
+                      "halo";
 
                     return (
-                      <article key={w.id} className="whisper-card">
+                      <article key={`${String(w.id)}-${index}`} className="whisper-card">
                         <div className="whisper-card-header mb-1 flex items-center justify-between text-xs text-slate-500">
                           <div className="flex items-center gap-2">
                             {/* Mini avatar */}
@@ -920,7 +1338,7 @@ export default function FeedPage() {
                               />
                             </div>
                             <span className="whisper-author font-medium text-slate-800">
-                              @{displayName}
+                              @{authorLabel}
                             </span>
                             <span className="whisper-dot">·</span>
                             <span className="whisper-time text-[0.7rem] text-slate-400">
@@ -987,13 +1405,21 @@ export default function FeedPage() {
                             {/* Hope / Spark */}
                             <button
                               type="button"
-                              onClick={() => toggleLike(w.id)}
+                              onClick={() => handleToggleHope(w)}
                               className={`hope-btn inline-flex items-center gap-1 ${
                                 w.isLiked ? "active text-amber-500" : ""
                               }`}
                             >
                               <SparkIcon />
                               <span>{Math.max(0, w.hop)}</span>
+                            </button>
+
+                            <button
+                              type="button"
+                              onClick={() => handleReportWhisper(w)}
+                              className="inline-flex items-center gap-1 hover:text-slate-500"
+                            >
+                              Bildir
                             </button>
                           </div>
                         </div>
@@ -1050,27 +1476,47 @@ export default function FeedPage() {
                                   placeholder="Nazik bir yankı bırak..."
                                   className="h-10 w-full resize-none border-none bg-transparent text-[0.8rem] text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-0"
                                 />
-                              </div>
+                            </div>
 
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  const trimmed = commentDraft.trim();
-                                  if (!trimmed) return;
+                            <button
+                              type="button"
+                              onClick={async () => {
+                                const trimmed = commentDraft.trim();
+                                if (!trimmed) return;
 
-                                  const check = filterToxic(trimmed);
-                                  if (!check.ok) {
+                                const check = filterToxic(trimmed);
+                                if (!check.ok) {
                                     alert(
                                       `Halo alanı nazik tutuluyor. Lütfen şu kelimeyi kaldır: "${check.word}".`
                                     );
                                     return;
                                   }
 
-                                  addComment(w.id, trimmed);
-                                  setCommentDrafts((prev) => ({
-                                    ...prev,
-                                    [w.id]: "",
-                                  }));
+                                  try {
+                                    const { data, error } = await supabase
+                                      .from("comments")
+                                      .insert({
+                                        whisper_id: w.id,
+                                        author_name: displayName || "anon",
+                                        content: trimmed,
+                                      })
+                                      .select("id, author_name, content, created_at")
+                                      .single();
+
+                                    if (error) {
+                                      console.error("Yorum kaydedilemedi:", error);
+                                      return;
+                                    }
+
+                                    addComment(w.id, trimmed);
+
+                                    setCommentDrafts((prev) => ({
+                                      ...prev,
+                                      [w.id]: "",
+                                    }));
+                                  } catch (err) {
+                                    console.error("Yorum insert hatası:", err);
+                                  }
                                 }}
                                 className="inline-flex h-9 items-center rounded-full bg-slate-900/95 px-3 text-[0.75rem] font-medium text-slate-50 shadow-[0_12px_30px_rgba(15,23,42,0.55)] hover:bg-slate-900"
                               >
@@ -1103,7 +1549,7 @@ export default function FeedPage() {
                     <div className="whisper-modal-header">
                       <div className="flex flex-col">
                         <span className="whisper-author">
-                          {expandedWhisper.username}
+                          @{displayName}
                         </span>
                         <span className="whisper-time">
                           {expandedWhisper.time || "Just now"}
