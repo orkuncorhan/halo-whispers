@@ -5,11 +5,13 @@ import { UserProvider } from "./context/UserContext";
 import { ColorModeProvider } from "./context/ColorModeContext";
 import { LanguageProvider } from "./context/LanguageContext";
 import PageTransition from "./components/PageTransition";
+import type { Metadata } from "next";
 import type React from "react";
 
-export const metadata = {
+export const metadata: Metadata = {
+  metadataBase: new URL("https://halo-whispers.vercel.app"),
   title: "Halo Whispers",
-  description: "Whispers of light across the city.",
+  description: "Whispers of hope in the city.",
 };
 
 export default function RootLayout({

@@ -4,6 +4,7 @@
 import React from "react";
 import Link from "next/link";
 import { useTheme } from "../context/ThemeContext";
+import { useUser } from "../context/UserContext";
 import { HaloSideNav, HaloBottomNav } from "../components/HaloNav";
 import { useColorMode } from "../context/ColorModeContext";
 import { useLanguage } from "../context/LanguageContext";
@@ -31,13 +32,23 @@ function moodGradient(mood: number) {
 }
 
 export default function ProfilePage() {
-  const { username, mood, haloHistory, whispers, logout } = useTheme();
+  const { username, mood, haloHistory, whispers } = useTheme();
   const { colorMode } = useColorMode();
   const isDark = colorMode === "dark";
   const { language } = useLanguage();
   const isTR = language === "tr";
 
-  const displayName = username || "Halo Walker";
+  // Supabase'ten gelen kullanıcı profili
+  const { displayName: profileDisplayName, username: backendUsername } =
+    useUser();
+
+  // Ekranda gösterilecek isim öncelik sırası:
+  // 1) profiles.display_name
+  // 2) profiles.username
+  // 3) ThemeContext içindeki (eski) username
+  // 4) Varsayılan isim
+  const displayName =
+    profileDisplayName || backendUsername || username || "Halo Walker";
 
   const userWhispers = whispers.filter((w) => w.isUserPost);
   const whispersCount = userWhispers.length;
@@ -323,13 +334,13 @@ export default function ProfilePage() {
                     HALO HISTORY
                   </p>
 
-                    {haloHistory.length === 0 ? (
-                      <p className="mt-3 text-xs text-slate-500">
-                        {isTR
-                          ? "Henüz kaydedilmiş bir halo yok. Mood seçtikçe burada küçük bir ışık günlüğü oluşacak."
-                          : "No halo has been recorded yet. As you pick your mood, a small journal of light will appear here."}
-                      </p>
-                    ) : (
+                  {haloHistory.length === 0 ? (
+                    <p className="mt-3 text-xs text-slate-500">
+                      {isTR
+                        ? "Henüz kaydedilmiş bir halo yok. Mood seçtikçe burada küçük bir ışık günlüğü oluşacak."
+                        : "No halo has been recorded yet. As you pick your mood, a small journal of light will appear here."}
+                    </p>
+                  ) : (
                     <div className="mt-3 space-y-2 text-xs text-slate-600">
                       {haloHistory.slice(-7).map((h, idx) => (
                         <div

@@ -6,22 +6,61 @@ import { useUser } from "../context/UserContext";
 import { useColorMode } from "../context/ColorModeContext";
 import { useLanguage } from "../context/LanguageContext";
 import { GlassCard } from "../components/GlassCard";
+import { createClient } from "@/lib/supabase/client";
 
 export default function SettingsPage() {
   const router = useRouter();
   const { username, setUsername } = useUser();
   const { colorMode, toggleColorMode } = useColorMode();
   const { language, setLanguage } = useLanguage();
+  const supabase = createClient();
 
   const isTR = language === "tr";
   const isDark = colorMode === "dark";
   const [nameInput, setNameInput] = useState(username ?? "");
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  const handleSubmit = (e: FormEvent) => {
+  const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
-    const trimmed = nameInput.trim();
-    if (trimmed) {
+    setError(null);
+    setSaving(true);
+
+    try {
+      const trimmed = nameInput.trim();
+      if (!trimmed) {
+        setSaving(false);
+        return;
+      }
+
+      const {
+        data: { user },
+        error: userError,
+      } = await supabase.auth.getUser();
+
+      if (userError) throw userError;
+      if (!user) throw new Error("Oturum bulunamadı.");
+
+      const { error: upsertError } = await supabase
+        .from("profiles")
+        .upsert({
+          id: user.id,
+          username: trimmed,
+          display_name: trimmed,
+        });
+
+      if (upsertError) throw upsertError;
+
       setUsername(trimmed);
+    } catch (err: any) {
+      if (err?.name === "AuthSessionMissingError") {
+        // Oturum yoksa sessizce geç
+        return;
+      }
+      console.error(err);
+      setError(err.message ?? "Profil kaydedilirken bir hata oluştu.");
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -146,12 +185,17 @@ export default function SettingsPage() {
                   dark:text-slate-50
                   dark:shadow-[inset_0_0_0_1px_rgba(15,23,42,0.6)]
                 "
-                placeholder={isTR ? "ornegin: orkun" : "e.g. luna-walker"}
+                placeholder={isTR ? "ornegin: softsunrise" : "e.g. softsunrise"}
               />
             </div>
 
+            {error && (
+              <p className="text-sm text-red-600">{error}</p>
+            )}
+
             <button
               type="submit"
+              disabled={saving}
               className="
                 w-full
                 mt-2
@@ -168,8 +212,23 @@ export default function SettingsPage() {
                 transition-colors
               "
             >
-              {isTR ? "Kaydet" : "Save"}
+              {saving
+                ? isTR
+                  ? "Kaydediliyor..."
+                  : "Saving..."
+                : isTR
+                ? "Kaydet"
+                : "Save"}
             </button>
+
+            {error && (
+              <p className="text-sm text-red-600 mt-2">{error}</p>
+            )}
+            {saving && !error && (
+              <p className="text-xs text-neutral-500 mt-1">
+                Kaydediliyor...
+              </p>
+            )}
           </form>
         </GlassCard>
       </div>

@@ -18,7 +18,7 @@ export default function WhisperDetail({ params }: WhisperDetailPageProps) {
   } = useTheme();
 
   const theme = getThemeColors();
-  const whisperId = Number(params.id);
+  const whisperId = params.id;
 
   const whisper: WhisperType | undefined = useMemo(
     () => whispers.find((w) => w.id === whisperId),
@@ -84,7 +84,7 @@ export default function WhisperDetail({ params }: WhisperDetailPageProps) {
           <div className="flex items-center justify-between mb-1">
             <div>
               <div className={`text-sm font-semibold ${theme.accent}`}>
-                @{whisper.username}
+                @{whisper.profiles?.username ?? "?"}
               </div>
               <div className="text-xs text-gray-400">{whisper.time}</div>
             </div>
