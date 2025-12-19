@@ -1,7 +1,7 @@
 // DOSYA: app/mood/page.tsx
 "use client";
 
-import React, { ChangeEvent } from "react";
+import React, { ChangeEvent, useCallback } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useTheme } from "../context/ThemeContext";
@@ -9,6 +9,9 @@ import { HaloOrb } from "../components/HaloOrb";
 import HaloBrandMark from "../components/HaloBrandMark";
 import { useLanguage } from "../context/LanguageContext";
 import { useColorMode } from "../context/ColorModeContext";
+import { createClient } from "@/lib/supabase/client";
+
+const supabase = createClient();
 
 export default function MoodPage() {
   const router = useRouter();
@@ -30,10 +33,52 @@ export default function MoodPage() {
     setMood(parseInt(e.target.value, 10));
   };
 
-  const handleConfirm = () => {
-    confirmMoodForToday();
-    router.push("/feed");
+  const mapSliderToMood = (value: number): "low" | "neutral" | "good" => {
+    if (value < 34) return "low";
+    if (value < 67) return "neutral";
+    return "good";
   };
+
+  const handleSaveMood = useCallback(async () => {
+    const {
+      data: { user },
+      error: userError,
+    } = await supabase.auth.getUser();
+    if (userError || !user) {
+      console.error(userError || "No user");
+      return;
+    }
+
+    const value = mood;
+    const mappedMood = mapSliderToMood(value);
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const tomorrow = new Date(today);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+
+    await supabase
+      .from("daily_moods")
+      .delete()
+      .eq("user_id", user.id)
+      .gte("created_at", today.toISOString())
+      .lt("created_at", tomorrow.toISOString());
+
+    const { error: insertError } = await supabase
+      .from("daily_moods")
+      .insert({
+        user_id: user.id,
+        mood: mappedMood,
+      });
+
+    if (insertError) {
+      console.error(insertError);
+      return;
+    }
+
+    confirmMoodForToday();
+    router.push("/stream");
+  }, [confirmMoodForToday, mood, router]);
 
   return (
     <>
@@ -238,7 +283,7 @@ export default function MoodPage() {
             {/* Butonlar */}
             <div className="mt-7 flex flex-col gap-3 sm:flex-row sm:items-center">
               <button
-                onClick={handleConfirm}
+                onClick={handleSaveMood}
                 className="inline-flex flex-1 items-center justify-center rounded-full bg-slate-900/90 px-6 py-2.5 text-sm font-medium text-slate-50 shadow-[0_20px_50px_rgba(15,23,42,0.40)] hover:bg-slate-900"
               >
                 {isTR ? "Akışa geç" : "Enter the Stream"}

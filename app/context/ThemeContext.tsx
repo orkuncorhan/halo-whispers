@@ -12,6 +12,7 @@ export interface WhisperType {
   id: string;
   username: string;
   time: string;
+  createdAt?: string;
   content: string;
   mood: string;
   hop: number;          // <-- Bu eksikti, eklendi
@@ -19,6 +20,7 @@ export interface WhisperType {
   comments: CommentType[];
   isUserPost?: boolean;
   isLiked?: boolean;
+  user_id?: string | null;
   authorUsername?: string | null;
   authorDisplayName?: string | null;
 }
@@ -123,6 +125,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
             ...w,
             id: w.id ? String(w.id) : crypto.randomUUID(),
             mood: w.mood ? String(w.mood) : "neutral",
+            createdAt: w.createdAt ?? new Date().toISOString(),
             hop: typeof w.hop === "number" ? w.hop : 0,
             comments: (w.comments ?? []).map((c: any) => ({
               ...c,
@@ -131,6 +134,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
             isLiked: w.isLiked ?? false,
             isUserPost: w.isUserPost ?? false,
             color: w.color ?? getThemeColors().halo,
+            user_id: w.user_id ?? null,
           }))
         );
       }
@@ -191,6 +195,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
         hour: "2-digit",
         minute: "2-digit",
       }),
+      createdAt: now.toISOString(),
       content: text,
       mood: String(mood),
       hop: 0,
@@ -198,6 +203,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
       comments: [],
       isUserPost: true,
       isLiked: false,
+      user_id: userId ?? null,
     };
     setWhispersState((prev) => {
       const updated = [newWhisper, ...prev];
