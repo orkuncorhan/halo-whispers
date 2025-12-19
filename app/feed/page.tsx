@@ -1,7 +1,9 @@
 // DOSYA: app/feed/page.tsx
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
+import type { User } from "@supabase/supabase-js";
+import { useRouter } from "next/navigation";
 import { useTheme, WhisperType } from "../context/ThemeContext";
 import { useUser } from "../context/UserContext";
 import { createClient } from "@/lib/supabase/client";
@@ -126,6 +128,7 @@ function WhisperComposer({
 }
 
 export default function FeedPage() {
+  const router = useRouter();
   const { userId, username } = useUser();
   const { colorMode } = useColorMode();
   const isDark = colorMode === "dark";
@@ -141,6 +144,35 @@ export default function FeedPage() {
     isContentToxic,
   } = useTheme();
   const supabase = createClient();
+
+  useEffect(() => {
+    const checkMood = async () => {
+      const {
+        data: { user },
+        error: userError,
+      } = await supabase.auth.getUser();
+      if (userError || !user) {
+        return;
+      }
+
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+
+      const { data, error } = await supabase
+        .from("daily_moods")
+        .select("id")
+        .eq("user_id", user.id)
+        .gte("created_at", today.toISOString())
+        .limit(1)
+        .maybeSingle();
+
+      if (!error && !data) {
+        router.push("/mood");
+      }
+    };
+
+    checkMood();
+  }, []);
 
   useEffect(() => {
     const loadFeed = async () => {
@@ -199,6 +231,8 @@ export default function FeedPage() {
             color: themeColors.halo,
             isLiked,
             isUserPost: !!userId && row.user_id === userId,
+            createdAt: row.created_at ?? new Date().toISOString(),
+            user_id: row.user_id ?? null,
             time: new Date(row.created_at ?? Date.now()).toLocaleString(
               "tr-TR",
               {
@@ -231,8 +265,22 @@ export default function FeedPage() {
     loadFeed();
   }, [supabase, setWhispers, userId]);
   const [text, setText] = useState("");
+  const [filter, setFilter] = useState<"all" | "mine">("all");
+  const [user, setUser] = useState<User | null>(null);
   // Supabase’ten gelen fısıltılar
   const [dbWhispers, setDbWhispers] = useState<WhisperType[]>([]);
+
+  useEffect(() => {
+    const fetchUser = async () => {
+      const { data, error } = await supabase.auth.getUser();
+      if (error) {
+        console.error("Supabase user alınamadı:", error);
+      }
+      setUser(data.user ?? null);
+    };
+
+    fetchUser();
+  }, [supabase]);
   const handleToggleHope = async (w: WhisperType) => {
     if (!userId) {
       alert("Önce giriş yapman gerekiyor.");
@@ -430,9 +478,11 @@ export default function FeedPage() {
             isUserPost:
               userId && row.user_id === userId ? true : false,
             comments: [],
+            createdAt: row.created_at ?? new Date().toISOString(),
             time: timeStr,
             username: row.profiles?.username ?? "",
             color: "",
+            user_id: row.user_id ?? null,
             authorUsername: row.profiles?.username ?? null,
             authorDisplayName: row.profiles?.display_name ?? null,
           };
@@ -515,6 +565,8 @@ export default function FeedPage() {
               color: themeColors.halo,
               isLiked,
               isUserPost: !!userId && data.user_id === userId,
+              createdAt: data.created_at ?? new Date().toISOString(),
+              user_id: data.user_id ?? null,
               time: new Date(
                 data.created_at ?? Date.now()
               ).toLocaleString("tr-TR", {
@@ -565,25 +617,36 @@ export default function FeedPage() {
   // Beam (paylaş) için kısa süreli animasyon durumu
   const [sharedId, setSharedId] = useState<string | null>(null);
 
-  const [showOnlyMine, setShowOnlyMine] = useState(false);
-
   // Supabase’ten gelenler + front-end’den eklediklerin
-  const allWhispers = [...dbWhispers, ...whispers];
+  const mergedWhispers = useMemo(
+    () => [...dbWhispers, ...whispers],
+    [dbWhispers, whispers]
+  );
 
-  const visibleWhispers = showOnlyMine && !!userId
-    ? allWhispers.filter((w) => w.isUserPost)
-    : allWhispers;
-
-  // Aynı id'ye sahip fısıltıları tekilleştir (React key hatasını önlemek için)
-  const dedupedVisibleWhispers = React.useMemo(() => {
+  // Aynı id'ye sahip fısıltıları tekilleştirip created_at'e göre sırala
+  const whispersForFilter = useMemo(() => {
     const map = new Map<string | number, WhisperType>();
-    for (const w of visibleWhispers) {
+    for (const w of mergedWhispers) {
       if (!map.has(w.id)) {
         map.set(w.id, w);
       }
     }
-    return Array.from(map.values());
-  }, [visibleWhispers]);
+    const deduped = Array.from(map.values());
+    deduped.sort((a, b) => {
+      const aTime = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+      const bTime = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+      return bTime - aTime;
+    });
+    return deduped;
+  }, [mergedWhispers]);
+
+  const filteredWhispers = useMemo(() => {
+    if (!whispersForFilter) return [];
+    if (filter === "mine" && user) {
+      return whispersForFilter.filter((w) => w.user_id === user.id);
+    }
+    return whispersForFilter;
+  }, [whispersForFilter, filter, user]);
 
   const [expandedWhisper, setExpandedWhisper] = useState<WhisperType | null>(
     null
@@ -1274,7 +1337,7 @@ export default function FeedPage() {
               <section className="space-y-3">
                 <div className="mb-3 flex items-center justify-between gap-3 text-[0.8rem] text-slate-500">
                   <span>
-                    {showOnlyMine
+                    {filter === "mine"
                       ? "Şu an sadece kendi fısıltıların akıyor."
                       : "Şu an herkesin fısıltıları akıyor."}
                   </span>
@@ -1282,9 +1345,9 @@ export default function FeedPage() {
                   <div className="inline-flex items-center rounded-full bg-slate-100/70 p-1 text-[0.75rem]">
                     <button
                       type="button"
-                      onClick={() => setShowOnlyMine(false)}
+                      onClick={() => setFilter("all")}
                       className={`rounded-full px-3 py-1 ${
-                        !showOnlyMine
+                        filter === "all"
                           ? "bg-white text-slate-900 shadow-[0_8px_18px_rgba(15,23,42,0.25)]"
                           : "text-slate-500"
                       }`}
@@ -1293,9 +1356,9 @@ export default function FeedPage() {
                     </button>
                     <button
                       type="button"
-                      onClick={() => setShowOnlyMine(true)}
+                      onClick={() => setFilter("mine")}
                       className={`rounded-full px-3 py-1 ${
-                        showOnlyMine
+                        filter === "mine"
                           ? "bg-slate-900 text-slate-50 shadow-[0_8px_18px_rgba(15,23,42,0.45)]"
                           : "text-slate-500"
                       }`}
@@ -1305,13 +1368,13 @@ export default function FeedPage() {
                   </div>
                 </div>
 
-                {dedupedVisibleWhispers.length === 0 ? (
+                {filteredWhispers.length === 0 ? (
                   <p className="mt-6 text-center text-xs text-slate-500">
                     Şu an burada hiç fısıltı yok. İlk cümleni yazdığında, bu
                     alan da ışıkla dolacak.
                   </p>
                 ) : (
-                  dedupedVisibleWhispers.map((w, index) => {
+                  filteredWhispers.map((w, index) => {
                     const hasComments = (w.comments ?? []).length > 0;
                     const isCommentsOpen = openCommentsFor === w.id;
                     const commentDraft = commentDrafts[w.id] ?? "";
