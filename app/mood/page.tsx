@@ -1,7 +1,7 @@
 // DOSYA: app/mood/page.tsx
 "use client";
 
-import React, { ChangeEvent, useCallback } from "react";
+import React, { ChangeEvent, useCallback, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useTheme } from "../context/ThemeContext";
@@ -20,6 +20,7 @@ export default function MoodPage() {
   const { colorMode } = useColorMode();
   const isDark = colorMode === "dark";
   const isTR = language === "tr";
+  const [navError, setNavError] = useState<string | null>(null);
 
   const moodLabel = mood < 40 ? "Heavy" : mood > 60 ? "Light" : "Neutral";
 
@@ -40,6 +41,7 @@ export default function MoodPage() {
   };
 
   const handleSaveMood = useCallback(async () => {
+    setNavError(null);
     const {
       data: { user },
       error: userError,
@@ -77,8 +79,17 @@ export default function MoodPage() {
     }
 
     confirmMoodForToday();
-    router.push("/stream");
-  }, [confirmMoodForToday, mood, router]);
+    try {
+      router.push("/feed");
+    } catch (err) {
+      console.error("Feed'e yönlendirme hatası:", err);
+      setNavError(
+        isTR
+          ? "Akışa yönlendirme başarısız. Aşağıdaki butonu kullanabilirsin."
+          : "Redirect to Feed failed. Please use the button below."
+      );
+    }
+  }, [confirmMoodForToday, isTR, mood, router]);
 
   return (
     <>
@@ -286,7 +297,7 @@ export default function MoodPage() {
                 onClick={handleSaveMood}
                 className="inline-flex flex-1 items-center justify-center rounded-full bg-slate-900/90 px-6 py-2.5 text-sm font-medium text-slate-50 shadow-[0_20px_50px_rgba(15,23,42,0.40)] hover:bg-slate-900"
               >
-                {isTR ? "Akışa geç" : "Enter the Stream"}
+                {isTR ? "Akışa geç" : "Go to Feed"}
               </button>
 
               <Link
@@ -296,6 +307,25 @@ export default function MoodPage() {
                 {isTR ? "Geri dön" : "Go back"}
               </Link>
             </div>
+
+            {navError && (
+              <div className="mt-3 space-y-2 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+                <p>{navError}</p>
+                <button
+                  type="button"
+                  onClick={() => {
+                    try {
+                      router.push("/feed");
+                    } catch (err) {
+                      console.error("Feed fallback navigation failed:", err);
+                    }
+                  }}
+                  className="inline-flex items-center justify-center rounded-full bg-slate-900 px-4 py-1.5 text-xs font-semibold text-white shadow-[0_12px_30px_rgba(15,23,42,0.35)] hover:bg-slate-800"
+                >
+                  {isTR ? "Feed'e git" : "Go to Feed"}
+                </button>
+              </div>
+            )}
           </div>
         </div>
       </main>

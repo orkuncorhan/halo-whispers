@@ -129,6 +129,20 @@ function WhisperComposer({
 
 export default function FeedPage() {
   const router = useRouter();
+  const supabase = createClient();
+  const [text, setText] = useState("");
+  const [filter, setFilter] = useState<"all" | "mine">("all");
+  const [user, setUser] = useState<User | null>(null);
+  const [dbWhispers, setDbWhispers] = useState<WhisperType[]>([]);
+  const [openCommentsFor, setOpenCommentsFor] = useState<string | null>(null);
+  const [commentDrafts, setCommentDrafts] = useState<Record<string, string>>(
+    {}
+  );
+  const [sharedId, setSharedId] = useState<string | null>(null);
+  const [expandedWhisper, setExpandedWhisper] = useState<WhisperType | null>(
+    null
+  );
+
   const { userId, username } = useUser();
   const { colorMode } = useColorMode();
   const isDark = colorMode === "dark";
@@ -143,7 +157,6 @@ export default function FeedPage() {
     getThemeColors,
     isContentToxic,
   } = useTheme();
-  const supabase = createClient();
 
   useEffect(() => {
     const checkMood = async () => {
@@ -176,8 +189,9 @@ export default function FeedPage() {
 
   useEffect(() => {
     const loadFeed = async () => {
+      if (filter === "mine" && !userId) return;
       try {
-        const { data, error } = await supabase
+        let query = supabase
           .from("whispers")
           .select(
             `
@@ -186,6 +200,8 @@ export default function FeedPage() {
           content,
           mood,
           created_at,
+          visibility,
+          is_public,
           profiles (
             username,
             display_name
@@ -202,6 +218,15 @@ export default function FeedPage() {
         `
           )
           .order("created_at", { ascending: false });
+
+        if (filter === "all") {
+          query = query.eq("visibility", "public");
+        } else if (filter === "mine") {
+          if (!userId) return;
+          query = query.eq("user_id", userId);
+        }
+
+        const { data, error } = await query;
 
         if (error) {
           console.error("Whispers yüklenemedi:", error);
@@ -233,6 +258,14 @@ export default function FeedPage() {
             isUserPost: !!userId && row.user_id === userId,
             createdAt: row.created_at ?? new Date().toISOString(),
             user_id: row.user_id ?? null,
+            isPublic: row.is_public ?? true,
+            visibility:
+              row.visibility ??
+              (typeof row.is_public === "boolean"
+                ? row.is_public
+                  ? "public"
+                  : "private"
+                : "public"),
             time: new Date(row.created_at ?? Date.now()).toLocaleString(
               "tr-TR",
               {
@@ -263,13 +296,7 @@ export default function FeedPage() {
     };
 
     loadFeed();
-  }, [supabase, setWhispers, userId]);
-  const [text, setText] = useState("");
-  const [filter, setFilter] = useState<"all" | "mine">("all");
-  const [user, setUser] = useState<User | null>(null);
-  // Supabase’ten gelen fısıltılar
-  const [dbWhispers, setDbWhispers] = useState<WhisperType[]>([]);
-
+  }, [filter, setWhispers, supabase, userId]);
   useEffect(() => {
     const fetchUser = async () => {
       const { data, error } = await supabase.auth.getUser();
@@ -402,6 +429,7 @@ export default function FeedPage() {
       const insertPayload: any = {
         content: trimmed,
         mood,
+        visibility: filter === "all" ? "public" : "private",
       };
 
       // Kullanıcı giriş yaptıysa user_id ekle
@@ -425,7 +453,11 @@ export default function FeedPage() {
     }
 
     // 3) Lokal state'i HER HALDE güncelle
-    addWhisper(trimmed, { id: supabaseId });
+    addWhisper(trimmed, {
+      id: supabaseId,
+      isPublic: filter === "all",
+      visibility: filter === "all" ? "public" : "private",
+    });
 
     // 4) Alanı temizle
     setText("");
@@ -433,8 +465,9 @@ export default function FeedPage() {
 
   useEffect(() => {
     const loadWhispers = async () => {
+      if (filter === "mine" && !userId) return;
       try {
-        const { data, error } = await supabase
+        let query = supabase
           .from("whispers")
           .select(
             `
@@ -443,6 +476,8 @@ export default function FeedPage() {
             mood,
             created_at,
             user_id,
+            visibility,
+            is_public,
             profiles (
               username,
               display_name
@@ -450,6 +485,15 @@ export default function FeedPage() {
           `
           )
           .order("created_at", { ascending: false });
+
+        if (filter === "all") {
+          query = query.eq("visibility", "public");
+        } else if (filter === "mine") {
+          if (!userId) return;
+          query = query.eq("user_id", userId);
+        }
+
+        const { data, error } = await query;
 
         if (error) {
           console.error("Whispers yüklenemedi:", error);
@@ -485,6 +529,14 @@ export default function FeedPage() {
             user_id: row.user_id ?? null,
             authorUsername: row.profiles?.username ?? null,
             authorDisplayName: row.profiles?.display_name ?? null,
+            isPublic: row.is_public ?? true,
+            visibility:
+              row.visibility ??
+              (typeof row.is_public === "boolean"
+                ? row.is_public
+                  ? "public"
+                  : "private"
+                : "public"),
           };
         }
         );
@@ -496,7 +548,7 @@ export default function FeedPage() {
     };
 
     loadWhispers();
-  }, [supabase, userId]);
+  }, [filter, supabase, userId]);
 
   useEffect(() => {
     const supabaseRealtime = createClient();
@@ -524,6 +576,8 @@ export default function FeedPage() {
                    content,
                    mood,
                    created_at,
+                   visibility,
+                   is_public,
                    profiles (
                      username,
                      display_name
@@ -547,6 +601,17 @@ export default function FeedPage() {
               return;
             }
 
+            const visibility =
+              (data as any).visibility ??
+              ((data as any).is_public === false ? "private" : "public");
+
+            if (filter === "all" && visibility !== "public") {
+              return;
+            }
+            if (filter === "mine" && userId && data.user_id !== userId) {
+              return;
+            }
+
             const themeColors = getThemeColors();
 
             const isLiked =
@@ -567,6 +632,8 @@ export default function FeedPage() {
               isUserPost: !!userId && data.user_id === userId,
               createdAt: data.created_at ?? new Date().toISOString(),
               user_id: data.user_id ?? null,
+              isPublic: (data as any).is_public ?? true,
+              visibility,
               time: new Date(
                 data.created_at ?? Date.now()
               ).toLocaleString("tr-TR", {
@@ -606,17 +673,6 @@ export default function FeedPage() {
   const displayName = username || "";
   const hasText = text.trim().length > 0;
 
-  // Hangi fısıltının yorum paneli açık?
-  const [openCommentsFor, setOpenCommentsFor] = useState<string | null>(null);
-
-  // Her fısıltı için taslak yorum metni
-  const [commentDrafts, setCommentDrafts] = useState<Record<string, string>>(
-    {}
-  );
-
-  // Beam (paylaş) için kısa süreli animasyon durumu
-  const [sharedId, setSharedId] = useState<string | null>(null);
-
   // Supabase’ten gelenler + front-end’den eklediklerin
   const mergedWhispers = useMemo(
     () => [...dbWhispers, ...whispers],
@@ -645,12 +701,17 @@ export default function FeedPage() {
     if (filter === "mine" && user) {
       return whispersForFilter.filter((w) => w.user_id === user.id);
     }
-    return whispersForFilter;
+    return whispersForFilter.filter((w) => {
+      const visibility =
+        w.visibility ??
+        (typeof w.isPublic === "boolean"
+          ? w.isPublic
+            ? "public"
+            : "private"
+          : "public");
+      return visibility !== "private";
+    });
   }, [whispersForFilter, filter, user]);
-
-  const [expandedWhisper, setExpandedWhisper] = useState<WhisperType | null>(
-    null
-  );
 
   const MAX_PREVIEW_CHARS = 260;
 

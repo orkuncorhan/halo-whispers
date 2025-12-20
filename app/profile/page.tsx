@@ -1,13 +1,14 @@
 // DOSYA: app/profile/page.tsx
 "use client";
 
-import React from "react";
+import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import { useTheme } from "../context/ThemeContext";
 import { useUser } from "../context/UserContext";
 import { HaloSideNav, HaloBottomNav } from "../components/HaloNav";
 import { useColorMode } from "../context/ColorModeContext";
 import { useLanguage } from "../context/LanguageContext";
+import { createClient } from "@/lib/supabase/client";
 
 /* --------- Yardımcı fonksiyonlar --------- */
 
@@ -37,6 +38,13 @@ export default function ProfilePage() {
   const isDark = colorMode === "dark";
   const { language } = useLanguage();
   const isTR = language === "tr";
+  const supabase = createClient();
+  const [profile, setProfile] = useState<{
+    username: string | null;
+    display_name: string | null;
+    bio: string | null;
+    updated_at: string | null;
+  } | null>(null);
 
   // Supabase'ten gelen kullanıcı profili
   const { displayName: profileDisplayName, username: backendUsername } =
@@ -48,7 +56,41 @@ export default function ProfilePage() {
   // 3) ThemeContext içindeki (eski) username
   // 4) Varsayılan isim
   const displayName =
-    profileDisplayName || backendUsername || username || "Halo Walker";
+    profile?.display_name ||
+    profileDisplayName ||
+    profile?.username ||
+    backendUsername ||
+    username ||
+    "Halo Walker";
+
+  const bioText =
+    profile?.bio && profile.bio.trim().length > 0
+      ? profile.bio
+      : isTR
+      ? "Bio eklenmemiş."
+      : "Bio not added.";
+
+  useEffect(() => {
+    const loadProfile = async () => {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+
+      if (!user) return;
+
+      const { data } = await supabase
+        .from("profiles")
+        .select("username, display_name, bio, updated_at")
+        .eq("id", user.id)
+        .maybeSingle();
+
+      if (data) {
+        setProfile(data);
+      }
+    };
+
+    loadProfile();
+  }, [supabase]);
 
   const userWhispers = whispers.filter((w) => w.isUserPost);
   const whispersCount = userWhispers.length;
@@ -215,11 +257,7 @@ export default function ProfilePage() {
                   <h1 className="mt-2 text-2xl font-semibold tracking-tight text-slate-900">
                     {displayName}
                   </h1>
-                  <p className="mt-1 text-xs text-slate-500">
-                    {isTR
-                      ? "Kelimelerini ışık halkasına dönüştüren sessiz ortak."
-                      : "A quiet ally that turns your words into a ring of light."}
-                  </p>
+                  <p className="mt-1 text-xs text-slate-500">{bioText}</p>
                 </div>
 
                 {/* İstatistikler */}

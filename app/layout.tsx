@@ -4,6 +4,7 @@ import { ThemeProvider } from "./context/ThemeContext";
 import { UserProvider } from "./context/UserContext";
 import { ColorModeProvider } from "./context/ColorModeContext";
 import { LanguageProvider } from "./context/LanguageContext";
+import { AuthProvider } from "./context/AuthContext";
 import PageTransition from "./components/PageTransition";
 import type { Metadata } from "next";
 import type React from "react";
@@ -33,15 +34,17 @@ export default function RootLayout({
 
           {/* Sayfa içerikleri – halo sahnesinin üstünde */}
           <div className="relative z-10">
-            <ColorModeProvider>
-              <LanguageProvider>
-                <UserProvider>
-                  <ThemeProvider>
-                    <PageTransition>{children}</PageTransition>
-                  </ThemeProvider>
-                </UserProvider>
-              </LanguageProvider>
-            </ColorModeProvider>
+            <AuthProvider>
+              <ColorModeProvider>
+                <LanguageProvider>
+                  <UserProvider>
+                    <ThemeProvider>
+                      <PageTransition>{children}</PageTransition>
+                    </ThemeProvider>
+                  </UserProvider>
+                </LanguageProvider>
+              </ColorModeProvider>
+            </AuthProvider>
           </div>
         </div>
       </body>

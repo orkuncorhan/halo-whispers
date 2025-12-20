@@ -23,6 +23,8 @@ export interface WhisperType {
   user_id?: string | null;
   authorUsername?: string | null;
   authorDisplayName?: string | null;
+  isPublic?: boolean;
+  visibility?: "public" | "private";
 }
 
 export interface CommentType {
@@ -55,7 +57,10 @@ interface ThemeContextType {
   logout: () => void;
   getThemeColors: () => ThemeColorsType;
   whispers: WhisperType[];
-  addWhisper: (text: string, options?: { id?: string; themeColor?: string }) => void;
+  addWhisper: (
+    text: string,
+    options?: { id?: string; themeColor?: string; isPublic?: boolean; visibility?: "public" | "private" }
+  ) => void;
   deleteWhisper: (id: string) => void;
   toggleLike: (id: string) => void;
   isMoodSetToday: boolean;
@@ -135,6 +140,8 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
             isUserPost: w.isUserPost ?? false,
             color: w.color ?? getThemeColors().halo,
             user_id: w.user_id ?? null,
+            isPublic: w.isPublic ?? true,
+            visibility: w.visibility ?? (w.isPublic === false ? "private" : "public"),
           }))
         );
       }
@@ -184,7 +191,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
 
   const addWhisper = (
     text: string,
-    options?: { id?: string; themeColor?: string }
+    options?: { id?: string; themeColor?: string; isPublic?: boolean; visibility?: "public" | "private" }
   ) => {
     const now = new Date();
     const generatedId = options?.id ?? (crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random().toString(16).slice(2)}`);
@@ -204,6 +211,8 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
       isUserPost: true,
       isLiked: false,
       user_id: userId ?? null,
+      isPublic: options?.isPublic ?? true,
+      visibility: options?.visibility ?? (options?.isPublic === false ? "private" : "public"),
     };
     setWhispersState((prev) => {
       const updated = [newWhisper, ...prev];
